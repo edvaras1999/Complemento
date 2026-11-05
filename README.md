@@ -18,7 +18,7 @@ Uso pessoal (o autor está incontactável).
 - Condição do OAR (`ESDBasicNeeds`).
 
 ## Valores assumidos (não confirmados no original)
-- Valores iniciais num save novo: fome 5760, sede 5760, sono 2160, corpo 0.
+- Valores iniciais num save novo: fome 2880, sede 2880, sono 1680, corpo 0 (são os valores dos botões "Reset" do MCM original; que o original comece mesmo daqui num save novo não está confirmado).
 - `bIsEnableMessage` começa desligado.
 - Ao carregar um save, o relógio é ressincronizado (o tempo passado antes de carregar não é aplicado).
 

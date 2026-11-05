@@ -94,8 +94,8 @@ namespace
 
 	void ResetValues()
 	{
-		// ASSUMIDO (nao confirmado no original): comeca "cheio". Valores de reposicao usados pelo Mod.
-		g_val[0] = 5760.0f; g_val[1] = 5760.0f; g_val[2] = 2160.0f; g_val[3] = 0.0f;
+		// Valores de reposicao do MCM original (_ESDMCM.psc: botoes "Reset values"): fome 2880, sede 2880, sono 1680, corpo 0.
+		g_val[0] = 2880.0f; g_val[1] = 2880.0f; g_val[2] = 1680.0f; g_val[3] = 0.0f;
 		for (int i = 0; i < 4; i++) g_ref[i] = g_val[i];
 		for (int i = 0; i < 7; i++) g_act[i] = 0.0f;
 	}
@@ -236,6 +236,12 @@ namespace Needs
 		if (mask) ModMask(mask, data, true);
 
 		g_lastMinutes = minutes;
+
+		// registo de diagnostico: uma linha por minuto de relogio real (12 ciclos de 5 s)
+		static int tick = 0;
+		if (++tick % 12 == 0)
+			_MESSAGE("ESD: fome=%.0f sede=%.0f sono=%.0f corpo=%.0f (ultimo intervalo: %.1f min de jogo)",
+				Get(kHungry), Get(kThirsty), Get(kSleepy), Get(kBody), elapsed);
 		// FALTA (fase seguinte): TaskDebuff (efeitos) e atualizacao do widget.
 	}
 
