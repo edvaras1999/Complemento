@@ -19,7 +19,7 @@ jobs:
         run: |
           $ws = $env:GITHUB_WORKSPACE
           $map = [ordered]@{
-            'main.cpp' = 'esdplugin'; 'Needs.cpp' = 'esdplugin'; 'Needs.h' = 'esdplugin'
+            'main.cpp' = 'esdplugin'; 'Food.cpp' = 'esdplugin'; 'Food.h' = 'esdplugin'; 'Needs.cpp' = 'esdplugin'; 'Needs.h' = 'esdplugin'
             'Papyrus.cpp' = 'esdplugin'; 'Papyrus.h' = 'esdplugin'
             'Settings.cpp' = 'esdplugin'; 'Settings.h' = 'esdplugin'; 'ESDPlugin.vcxproj' = 'esdplugin'
             'Quick_Loot_1_1f_Source_Files__for_modders_-73096-1-1f.7z' = 'third_party'

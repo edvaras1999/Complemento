@@ -10,10 +10,18 @@ Uso pessoal (o autor está incontactável).
 - Definições em `Data\SKSE\Plugins\EatingSleepingDrinking\Settings.json`, com os valores por omissão do original (aceita o `;` no lugar de `:` do ficheiro de exemplo).
 - Grava as necessidades no cosave (registo `ESDD`, versão 2, 8 floats).
 
+## Comer e beber (novo)
+- Ao equipar (consumir) comida ou bebida, o plugin classifica o item pelas 5 listas do ESD e repõe fome/sede:
+  comida: (peso) x fIntensityFoods x 1000; comida crua: o mesmo x 0,1; bebida: peso x fIntensityDrinks x 1500;
+  sopa: fome como comida + 25% de sede. Itens da lista "nem comida nem bebida" são ignorados.
+- As listas são encontradas sem depender do índice de carga (procura o plugin do ESD entre os normais e os light).
+  O `ESDPlugin.log` diz "listas de alimentos encontradas" ou "nao encontradas".
+- Ainda sem: bónus de alimentos, mensagens, itens especiais (HearthFires), garrafas vazias.
+
 ## O que ainda NÃO faz (próximas fases)
 - Debuffs, buffs, sons e expressões (`TaskDebuff`, `SetResult*`).
 - Eventos que alimentam os contadores de atividade (animação, golpes, magias) e o que cada evento faz às necessidades.
-- Reconhecer comida/bebida, garrafas e toalhas; evento `OnDetectNewFood` etc.
+- Sono (recuperar ao dormir), garrafas e toalhas; evento `OnDetectNewFood` etc.
 - Widget do HUD, atalhos, comandos de consola, `TakeMeals`, `ShowMessage`, `IsTeammateFavor`, `GetHeadingAngle`, `GetAddedFoodsFromList`.
 - Condição do OAR (`ESDBasicNeeds`).
 

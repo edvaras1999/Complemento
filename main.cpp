@@ -6,6 +6,9 @@
 #include "Needs.h"
 #include "Settings.h"
 #include "Papyrus.h"
+#include "Food.h"
+#include <Skyrim/Events/ScriptEvent.h>
+#include <Skyrim/Forms/PlayerCharacter.h>
 
 namespace
 {
@@ -37,6 +40,48 @@ namespace
 	}
 
 	//-------------------------------------------------------
+	// equipar comida/bebida (TESEquipEvent). Layout 32 bits: ator, item base, ref original, id unico, equipado
+	//-------------------------------------------------------
+	struct ESDEquipEvent
+	{
+		TESObjectREFR	*reference;		// 00
+		UInt32			baseObject;		// 04
+		UInt32			originalRefr;	// 08
+		UInt16			uniqueId;		// 0C
+		UInt8			equipped;		// 0E
+		UInt8			pad0F;
+	};
+
+	class EquipTask : public TaskDelegate
+	{
+		UInt32 m_id;
+	public:
+		EquipTask(UInt32 id) : m_id(id) {}
+		virtual void Run() override { Food::OnEquip(m_id); }
+		virtual void Dispose() override { delete this; }
+	};
+
+	class EquipSink : public BSTEventSink<TESEquipEvent>
+	{
+	public:
+		EventResult ReceiveEvent(TESEquipEvent *evn, BSTEventSource<TESEquipEvent> *src) override
+		{
+			const ESDEquipEvent *e = (const ESDEquipEvent *)evn;
+			if (e && e->equipped && e->baseObject && g_thePlayer && e->reference == (TESObjectREFR *)g_thePlayer)
+			{
+				const SKSEPlugin *plugin = SKSEPlugin::GetSingleton();
+				const SKSETaskInterface *task = plugin ? plugin->GetInterface<SKSETaskInterface>() : NULL;
+				if (task)
+					task->AddTask(new EquipTask(e->baseObject));
+			}
+			return kEvent_Continue;
+		}
+	};
+
+	EquipSink g_equipSink;
+	bool g_equipSinkAdded = false;
+
+	//-------------------------------------------------------
 	// cosave
 	//-------------------------------------------------------
 	void CosaveSave(SKSESerializationInterface *intfc)	{ Needs::Save(intfc); }
@@ -51,11 +96,16 @@ namespace
 		if (!msg) return;
 		switch (msg->type)
 		{
+		case SKSEMessagingInterface::kMessage_DataLoaded:
+			Food::FindLists();
+			if (!g_equipSinkAdded) { g_equipEventSource.AddEventSink(&g_equipSink); g_equipSinkAdded = true; }
+			break;
 		case SKSEMessagingInterface::kMessage_PreLoadGame:
 			Needs::SetReady(false);
 			break;
 		case SKSEMessagingInterface::kMessage_PostLoadGame:
 		case SKSEMessagingInterface::kMessage_NewGame:
+			if (!Food::HasLists()) Food::FindLists();
 			Needs::ResyncClock();				// nao aplicar o tempo passado antes do carregamento
 			Needs::SetReady(true);
 			break;
