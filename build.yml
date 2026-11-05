@@ -1,0 +1,137 @@
+name: Build ESDPlugin (plugin SKSE para Skyrim LE)
+
+# Corre a cada alteracao enviada ao repositorio e tambem em "Run workflow" na aba Actions.
+# No fim, baixe o artefacto "ESDPlugin-instalacao" (zip pronto para instalar com o MO2).
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar o conteudo do repositorio
+        uses: actions/checkout@v4
+
+      - name: Organizar os ficheiros em pastas (caso tenham sido enviados soltos)
+        shell: pwsh
+        run: |
+          $ws = $env:GITHUB_WORKSPACE
+          $map = [ordered]@{
+            'main.cpp' = 'esdplugin'; 'Needs.cpp' = 'esdplugin'; 'Needs.h' = 'esdplugin'
+            'Papyrus.cpp' = 'esdplugin'; 'Papyrus.h' = 'esdplugin'
+            'Settings.cpp' = 'esdplugin'; 'Settings.h' = 'esdplugin'; 'ESDPlugin.vcxproj' = 'esdplugin'
+            'Quick_Loot_1_1f_Source_Files__for_modders_-73096-1-1f.7z' = 'third_party'
+          }
+          foreach ($name in $map.Keys) {
+            $src = Join-Path $ws $name
+            if (Test-Path $src -PathType Leaf) {
+              $dir = Join-Path $ws $map[$name]
+              New-Item -ItemType Directory -Force $dir | Out-Null
+              Move-Item $src (Join-Path $dir $name) -Force
+              Write-Host "Movido para a pasta certa: $name -> $($map[$name])"
+            }
+          }
+          # O arquivo da libSkyrim pode ter outro nome (o GitHub troca espacos e parenteses): qualquer .7z com "quick" e "loot" no nome serve.
+          foreach ($f in Get-ChildItem $ws -File -Filter '*.7z' | Where-Object { $_.Name -match '(?i)quick.?loot' }) {
+            $dir = Join-Path $ws 'third_party'
+            New-Item -ItemType Directory -Force $dir | Out-Null
+            Move-Item $f.FullName (Join-Path $dir $f.Name) -Force
+            Write-Host "Movido para third_party: $($f.Name)"
+          }
+
+      - name: Preparar o MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Extrair a libSkyrim (codigo-fonte do QuickLoot 1.1f)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ws = $env:GITHUB_WORKSPACE
+          # Procura o .7z da libSkyrim: primeiro em third_party, depois em qualquer pasta do repositorio.
+          $archive = Get-ChildItem (Join-Path $ws 'third_party') -Filter '*.7z' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $archive) {
+            $archive = Get-ChildItem $ws -Recurse -File -Filter '*.7z' -ErrorAction SilentlyContinue |
+              Where-Object { $_.FullName -notmatch '\\ql_src\\' } |
+              Sort-Object { if ($_.Name -match '(?i)quick.?loot') { 0 } else { 1 } } | Select-Object -First 1
+          }
+          if (-not $archive) {
+            Write-Host 'Ficheiros no repositorio (raiz e third_party):'
+            Get-ChildItem $ws -File | ForEach-Object { '  ' + $_.Name }
+            Get-ChildItem (Join-Path $ws 'third_party') -ErrorAction SilentlyContinue | ForEach-Object { '  third_party\' + $_.Name }
+            throw 'Nao encontrei nenhum ficheiro .7z no repositorio. Faca upload do arquivo do QuickLoot 1.1f (Source Files for modders).'
+          }
+          Write-Host "A usar: $($archive.FullName) ($($archive.Length) bytes)"
+          & "C:\Program Files\7-Zip\7z.exe" x $archive.FullName "-o$ws\ql_src" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "O 7-Zip nao conseguiu abrir o arquivo (codigo $LASTEXITCODE)." }
+          $skseProj = Get-ChildItem "$ws\ql_src" -Recurse -Filter 'SKSE.vcxproj' | Select-Object -First 1
+          if (-not $skseProj) { throw 'Nao encontrei SKSE.vcxproj dentro do arquivo.' }
+          $dll = $skseProj.Directory.Parent.FullName
+          Write-Host "Raiz da libSkyrim: $dll"
+          Get-ChildItem $dll -Directory | ForEach-Object { '  ' + $_.Name }
+          "LIBSKYRIM_DLL=$dll" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
+      - name: Montar o projeto dentro da arvore da libSkyrim
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ws = $env:GITHUB_WORKSPACE
+          $dll = $env:LIBSKYRIM_DLL
+          # Os projetos antigos pedem ToolsVersion 14.0; o MSBuild atual usa "Current".
+          foreach ($p in Get-ChildItem $dll -Recurse -Filter '*.vcxproj') {
+            $txt = Get-Content -Raw $p.FullName
+            $new = $txt -replace 'ToolsVersion="[0-9.]+"', 'ToolsVersion="Current"'
+            if ($new -ne $txt) { Set-Content -Path $p.FullName -Value $new -Encoding utf8; Write-Host "ToolsVersion ajustado: $($p.Name)" }
+          }
+          # PapyrusFunctions.h (libSkyrim) falta um "typename" que os compiladores antigos aceitavam
+          # e o v143 nao: sem isto, qualquer funcao nativa Papyrus da erro C2275.
+          $pf = Join-Path $dll 'SKSE\include\SKSE\PapyrusFunctions.h'
+          $txt = Get-Content -Raw $pf
+          $fixed = [regex]::Replace($txt, 'GetTypeID<\s*type_at<', 'GetTypeID< typename type_at<')
+          if ($fixed -ne $txt) { Set-Content -Path $pf -Value $fixed -NoNewline -Encoding utf8; Write-Host 'PapyrusFunctions.h corrigido (typename)' }
+          else { Write-Host 'AVISO: nao encontrei o padrao a corrigir em PapyrusFunctions.h' }
+
+          $dest = Join-Path $dll 'ESDPlugin'
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          Copy-Item "$ws\esdplugin\*" $dest -Recurse -Force
+          Get-ChildItem $dest | Format-Table Name, Length
+
+      - name: Compilar (Release, 32 bits)
+        shell: pwsh
+        run: |
+          $dll = $env:LIBSKYRIM_DLL
+          $log = Join-Path $env:GITHUB_WORKSPACE 'build.log'
+          $opts = @('/m', '/p:Configuration=Release', '/p:Platform=Win32', '/p:PlatformToolset=v143',
+                    '/p:WindowsTargetPlatformVersion=10.0', "/p:SolutionDir=$dll\", '/v:minimal')
+          '=== ESDPlugin (com SKSE.lib e Skyrim.lib da libSkyrim) ===' | Out-File $log
+          msbuild "$dll\ESDPlugin\ESDPlugin.vcxproj" @opts 2>&1 | Tee-Object -FilePath $log -Append
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '=== PRIMEIROS ERROS (copie daqui) ==='
+            Select-String -Path $log -Pattern ' error ' | Select-Object -First 40 | ForEach-Object { $_.Line.Trim() }
+            throw "A compilacao falhou (codigo $LASTEXITCODE). Veja o build.log."
+          }
+
+      - name: Reunir o resultado
+        if: always()
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:GITHUB_WORKSPACE 'out'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          if ($env:LIBSKYRIM_DLL) {
+            Get-ChildItem $env:LIBSKYRIM_DLL -Recurse -Filter ESDPlugin.dll -ErrorAction SilentlyContinue |
+              Copy-Item -Destination $out
+          }
+          $log = Join-Path $env:GITHUB_WORKSPACE 'build.log'
+          if (Test-Path $log) { Copy-Item $log $out }
+          "Passo concluido em $(Get-Date -Format s)" | Out-File (Join-Path $out 'info.txt')
+          Get-ChildItem $out | Format-Table Name, Length
+
+      - name: Guardar o resultado para download
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dll
+          path: out
+          if-no-files-found: warn
+

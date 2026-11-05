@@ -1,1 +1,31 @@
-# Complemento
+# ESD-LE — Eating Sleeping Drinking para Skyrim LE (fase 1: núcleo)
+
+Plugin SKSE (32 bits) que reimplementa o núcleo do `ESDPlugin.dll` do ESD NG 2.3.0, lido a partir do código desmontado.
+Uso pessoal (o autor está incontactável).
+
+## O que já faz
+- Mantém fome, sede, sono e corpo (`Needs.cpp`), com as mesmas regras de limite do original.
+- Passagem do tempo (a fórmula de `SetNegativeBasicNeeds`): lê `GameDaysPassed` e `TimeScale` e aplica o desgaste a cada 5 s de relógio real.
+- Funções Papyrus: `ESDUtility.GetBasicNeeds / SetBasicNeeds / ModBasicNeeds` e `_ESDMCM.GetESDSetting / GetESDSettingString / SetESDSetting`.
+- Definições em `Data\SKSE\Plugins\EatingSleepingDrinking\Settings.json`, com os valores por omissão do original (aceita o `;` no lugar de `:` do ficheiro de exemplo).
+- Grava as necessidades no cosave (registo `ESDD`, versão 2, 8 floats).
+
+## O que ainda NÃO faz (próximas fases)
+- Debuffs, buffs, sons e expressões (`TaskDebuff`, `SetResult*`).
+- Eventos que alimentam os contadores de atividade (animação, golpes, magias) e o que cada evento faz às necessidades.
+- Reconhecer comida/bebida, garrafas e toalhas; evento `OnDetectNewFood` etc.
+- Widget do HUD, atalhos, comandos de consola, `TakeMeals`, `ShowMessage`, `IsTeammateFavor`, `GetHeadingAngle`, `GetAddedFoodsFromList`.
+- Condição do OAR (`ESDBasicNeeds`).
+
+## Valores assumidos (não confirmados no original)
+- Valores iniciais num save novo: fome 5760, sede 5760, sono 2160, corpo 0.
+- `bIsEnableMessage` começa desligado.
+- Ao carregar um save, o relógio é ressincronizado (o tempo passado antes de carregar não é aplicado).
+
+## Como compilar
+Igual ao Better Looting: envia estes ficheiros para um repositório GitHub (raiz), mais o `.7z` do QuickLoot 1.1f (libSkyrim) e a pasta `.github/workflows/build.yml`.
+Corre "Run workflow" e baixa o artefacto `dll` (`ESDPlugin.dll`).
+
+## Instalação para teste
+`ESDPlugin.dll` em `Data\SKSE\Plugins\`. Os `.esp` e os scripts do ESD têm de ser os da versão NG (ESL na LE: ver o que já funciona na tua lista).
+Procura no `Documents\My Games\Skyrim\SKSE\ESDPlugin.log` as linhas que começam por "ESD:".
