@@ -8,6 +8,8 @@
 #include "Food.h"
 #include "Needs.h"
 #include "Settings.h"
+#include "Messages.h"
+#include "Debuff.h"
 
 namespace
 {
@@ -20,6 +22,8 @@ namespace
 
 	UInt32	g_lists[5] = { 0, 0, 0, 0, 0 };
 	bool	g_found = false;
+	UInt32	g_base = 0;
+	UInt32	g_mask = 0;
 
 	BGSListForm *AsList(UInt32 formId)
 	{
@@ -96,6 +100,8 @@ namespace Food
 		for (int i = 0; i < 5; i++)
 			g_lists[i] = bestBase | (kLocalIds[i] & bestMask);
 		g_found = true;
+		g_base = bestBase;
+		g_mask = bestMask;
 		_MESSAGE("ESD: listas de alimentos encontradas (base %08X, %d de 7)", bestBase, best);
 		for (int i = 0; i < 5; i++)
 		{
@@ -105,6 +111,12 @@ namespace Food
 	}
 
 	bool HasLists() { return g_found; }
+
+	UInt32 FormId(UInt32 localId)
+	{
+		if (!g_found) return 0;
+		return g_base | (localId & g_mask);
+	}
 
 	void OnEquip(UInt32 baseFormId)
 	{
@@ -165,6 +177,8 @@ namespace Food
 
 		if (!mask) return;
 		Needs::ModMask(mask, data, true);
+		Messages::ShowItem((type == 2) ? "sTakeDrinks" : "sTakeFoods", form->GetName());
+		Debuff::Refresh(mask);
 		_MESSAGE("ESD: consumiu item %08X (tipo %u, peso %.2f): fome=%.0f sede=%.0f",
 			baseFormId, type, weight, Needs::Get(Needs::kHungry), Needs::Get(Needs::kThirsty));
 		// FALTA: mensagens, debuffs/widget, bonus de alimentos, itens especiais (HearthFires, garrafas).

@@ -96,11 +96,14 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Debuff.cpp" />
     <ClCompile Include="Food.cpp" />
+    <ClCompile Include="Messages.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Needs.cpp" />
     <ClCompile Include="Papyrus.cpp" />
     <ClCompile Include="Settings.cpp" />
+    <ClCompile Include="Widget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SKSE\SKSE.vcxproj">
@@ -111,10 +114,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Debuff.h" />
     <ClInclude Include="Food.h" />
+    <ClInclude Include="Messages.h" />
     <ClInclude Include="Needs.h" />
     <ClInclude Include="Papyrus.h" />
     <ClInclude Include="Settings.h" />
+    <ClInclude Include="Widget.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

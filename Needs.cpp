@@ -10,6 +10,7 @@
 
 #include "Needs.h"
 #include "Settings.h"
+#include "Debuff.h"
 
 namespace
 {
@@ -229,6 +230,7 @@ namespace Needs
 		LeaveCriticalSection(&g_lock);
 
 		_MESSAGE("ESD: dormiu/esperou %.0f min de jogo: sono +%.0f = %.0f", minutes, gain, v);
+		Debuff::Refresh(kSleepy);
 		Update();			// aplica o desgaste do tempo passado (o original poe UpdateBasicNeeds na fila)
 	}
 
@@ -280,7 +282,8 @@ namespace Needs
 		if (++tick % 12 == 0)
 			_MESSAGE("ESD: fome=%.0f sede=%.0f sono=%.0f corpo=%.0f (ultimo intervalo: %.1f min de jogo)",
 				Get(kHungry), Get(kThirsty), Get(kSleepy), Get(kBody), elapsed);
-		// FALTA (fase seguinte): TaskDebuff (efeitos) e atualizacao do widget.
+		if (mask) Debuff::Refresh(mask);
+		// FALTA: atualizacao do widget (HUD).
 	}
 
 	void Save(const SKSESerializationInterface *intfc)

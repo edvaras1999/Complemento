@@ -18,20 +18,12 @@ jobs:
         shell: pwsh
         run: |
           $ws = $env:GITHUB_WORKSPACE
-          $map = [ordered]@{
-            'main.cpp' = 'esdplugin'; 'Food.cpp' = 'esdplugin'; 'Food.h' = 'esdplugin'; 'Needs.cpp' = 'esdplugin'; 'Needs.h' = 'esdplugin'
-            'Papyrus.cpp' = 'esdplugin'; 'Papyrus.h' = 'esdplugin'
-            'Settings.cpp' = 'esdplugin'; 'Settings.h' = 'esdplugin'; 'ESDPlugin.vcxproj' = 'esdplugin'
-            'Quick_Loot_1_1f_Source_Files__for_modders_-73096-1-1f.7z' = 'third_party'
-          }
-          foreach ($name in $map.Keys) {
-            $src = Join-Path $ws $name
-            if (Test-Path $src -PathType Leaf) {
-              $dir = Join-Path $ws $map[$name]
-              New-Item -ItemType Directory -Force $dir | Out-Null
-              Move-Item $src (Join-Path $dir $name) -Force
-              Write-Host "Movido para a pasta certa: $name -> $($map[$name])"
-            }
+          # Qualquer .cpp, .h ou .vcxproj solto na raiz vai para a pasta do projeto (assim ficheiros novos nunca falham por falta de lista).
+          foreach ($f in Get-ChildItem $ws -File | Where-Object { $_.Extension -match '^\.(cpp|h|vcxproj)$' }) {
+            $dir = Join-Path $ws 'esdplugin'
+            New-Item -ItemType Directory -Force $dir | Out-Null
+            Move-Item $f.FullName (Join-Path $dir $f.Name) -Force
+            Write-Host "Movido para esdplugin: $($f.Name)"
           }
           # O arquivo da libSkyrim pode ter outro nome (o GitHub troca espacos e parenteses): qualquer .7z com "quick" e "loot" no nome serve.
           foreach ($f in Get-ChildItem $ws -File -Filter '*.7z' | Where-Object { $_.Name -match '(?i)quick.?loot' }) {

@@ -5,6 +5,8 @@
 #include "Papyrus.h"
 #include "Needs.h"
 #include "Settings.h"
+#include "Debuff.h"
+#include "Widget.h"
 
 //========================================================
 // Funcoes nativas usadas pelos scripts do ESD (ESDUtility.psc e _ESDMCM.psc).
@@ -31,7 +33,10 @@ namespace
 		bool enabled = (type == Needs::kHungry && s.hungry) || (type == Needs::kThirsty && s.thirsty) ||
 					   (type == Needs::kSleepy && s.sleepiness) || (type == Needs::kBody && s.bodyHealth);
 		if (enabled)
+		{
 			Needs::Set(type, value, true);
+			Debuff::QueueRefresh(type);
+		}
 	}
 
 	// ModBasicNeeds(string typeName, float value): soma ao valor atual e devolve o resultado.
@@ -55,7 +60,7 @@ namespace
 		int idx = (type == Needs::kHungry) ? 0 : (type == Needs::kThirsty) ? 1 : (type == Needs::kSleepy) ? 2 : 3;
 		data.v[idx] = value;
 		Needs::ModMask(type, data, true);
-		// FALTA (fase seguinte): TaskDebuff e widget, como no SetResult* do original.
+		Debuff::QueueRefresh(type);
 		return Needs::Get(type);
 	}
 
@@ -73,7 +78,10 @@ namespace
 	void N_SetESDSetting(BSFixedString name, float value)
 	{
 		if (ESDSettings::SetFloat(name.c_str(), value))
+		{
 			ESDSettings::Save();
+			Widget::QueueConfigure();
+		}
 		else
 			_MESSAGE("ESD papyrus: definicao desconhecida: %s", name.c_str());
 	}

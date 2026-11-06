@@ -18,6 +18,22 @@ Uso pessoal (o autor está incontactável).
   O `ESDPlugin.log` diz "listas de alimentos encontradas" ou "nao encontradas".
 - Ainda sem: bónus de alimentos, mensagens, itens especiais (HearthFires), garrafas vazias.
 
+## HUD (novo)
+- Menu Scaleform próprio que carrega `Data\Interface\EatingSleepingDrinking\KNNWidgetMeter.swf` (o mesmo do original) e mostra fome, sede e sono.
+- Liga-se no MCM (widget "Primary"). Posição, escala e transparência vêm de `fPrimaryPosX/PosY/Scale/Alpha`.
+- A percentagem de cada barra segue o original: acima do limiar `(valor - limiar) / escala x 100` (lado positivo), abaixo `(valor - limiar) / denominador x 100`
+  (lado negativo; o denominador usa `fDayToDie`). Esconde-se enquanto há menus que pausam o jogo.
+- Ainda sem: widget opcional (corpo e embriaguez), ícones por necessidade, deslocamentos (`...OffsetX/Y`).
+- O SWF original é versão 15 (SE); se a LE não o mostrar, o log diz "ERRO: nao consegui carregar ...swf".
+
+## Buffs, debuffs e mensagens (novo)
+- Limiares do original: fome e sede 1440; sono 720; corpo `fWashBodyInterval x 1440` (aviso de banho a partir de `(intervalo-1) x 1440 + 720`).
+- Acima do limiar (fome/sede/sono): buff (bem alimentado, sem sede, descansado). Abaixo: debuff + mensagem uma vez
+  ("I'm starving...", "I'm thirsty...", "I'm tired..."). No corpo: limpo = buff, sujo = debuff + "My body have got dirty...".
+- Os feitiços são os do .esp do ESD (os scripts do ESD tratam dos efeitos); a DLL só os adiciona e remove.
+- Comer/beber mostra "Ate a {}" / "Drank a {}".
+- Ainda sem: feitiços de duração (180 s), níveis visuais de sujidade, sons/expressões, HUD.
+
 ## Dormir (novo)
 - Ao fechar o menu Dormir/Esperar, o sono sobe `(2 x minutos) x fShortSleeper + minutos` (com fShortSleeper = 1: 3 por minuto dormido),
   com o mesmo limite de antes (acima de 4320 passa a 2160). O desgaste do tempo passado é aplicado logo a seguir.

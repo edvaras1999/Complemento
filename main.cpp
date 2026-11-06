@@ -7,6 +7,9 @@
 #include "Settings.h"
 #include "Papyrus.h"
 #include "Food.h"
+#include "Messages.h"
+#include "Debuff.h"
+#include "Widget.h"
 #include <Skyrim/Events/ScriptEvent.h>
 #include <Skyrim/Events/MenuEvent.h>
 #include <Skyrim/Menus/MenuManager.h>
@@ -167,6 +170,7 @@ namespace
 		{
 		case SKSEMessagingInterface::kMessage_DataLoaded:
 			Food::FindLists();
+			Widget::Register();
 			if (!g_equipSinkAdded) { g_equipEventSource.AddEventSink(&g_equipSink); g_equipSinkAdded = true; }
 			AddSleepSinks();
 			break;
@@ -179,6 +183,8 @@ namespace
 			AddSleepSinks();
 			Needs::ResyncClock();				// nao aplicar o tempo passado antes do carregamento
 			Needs::SetReady(true);
+			Debuff::QueueRefresh(Needs::kAll);
+			Widget::Open();
 			break;
 		}
 	}
@@ -230,6 +236,7 @@ public:
 	{
 		Needs::Init();
 		ESDSettings::Load();
+		Messages::Load();
 		CreateThread(NULL, 0, &Worker, NULL, 0, NULL);
 	}
 } thePlugin;
