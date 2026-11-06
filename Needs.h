@@ -36,6 +36,9 @@ namespace Needs
 	void ResyncClock();										// volta a ler o relogio do jogo (sem aplicar o intervalo perdido)
 	void Update();											// passagem do tempo (corre na thread principal)
 
+	void SleepStart(float durationDays);					// TESSleepStartEvent: guarda a duracao (em dias de jogo)
+	void SleepMenuClosed();									// ao fechar o menu Dormir/Esperar: repoe o sono
+
 	void Save(const SKSESerializationInterface *intfc);
 	void Load(const SKSESerializationInterface *intfc);
 	void Revert();

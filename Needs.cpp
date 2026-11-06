@@ -25,6 +25,7 @@ namespace
 	float	g_act[7];						// contadores de atividade  (original: +0x150..+0x168)
 	float	g_lastMinutes = 0.0f;			// ultimo instante processado (minutos de jogo)
 	bool	g_ready = false;
+	float	g_sleepDays = 0.0f;				// duracao do sono/espera em dias de jogo (original: +0x18C)
 
 	bool IsFinite(float f)
 	{
@@ -192,6 +193,43 @@ namespace Needs
 		float minutes, scale;
 		if (GameMinutes(minutes, scale))
 			g_lastMinutes = minutes;
+	}
+
+
+	// Evento de inicio de sono (BasicNeeds::ProcessEvent(TESSleepStartEvent) do original):
+	// so guarda a duracao se o sono estiver ativado e a duracao for positiva.
+	void SleepStart(float durationDays)
+	{
+		if (!g_init) return;
+		if (!ESDSettings::GetCore().sleepiness) return;
+		if (durationDays > 0.0f)
+			g_sleepDays = durationDays;
+	}
+
+	// Ao fechar o menu Dormir/Esperar (BasicNeeds::ProcessEvent(MenuOpenCloseEvent) do original):
+	//   minutos = dias * 24 * 60;  ganho = (2 * minutos) * fShortSleeper + minutos
+	//   sono = sono + ganho;  se > 4320 passa a 2160 (valor atual e de referencia)
+	void SleepMenuClosed()
+	{
+		if (!g_init) return;
+		float days = g_sleepDays;
+		g_sleepDays = 0.0f;
+		if (!(days > 0.0f)) return;
+		if (!ESDSettings::GetCore().sleepiness) return;
+
+		float minutes = days * 24.0f * 60.0f;
+		float shortSleeper = ESDSettings::GetFloat("fShortSleeper", 1.0f);
+		float gain = (minutes + minutes) * shortSleeper + minutes;
+
+		EnterCriticalSection(&g_lock);
+		float v = g_val[2] + gain;
+		if (v > 4320.0f) v = 2160.0f;
+		g_val[2] = v;
+		g_ref[2] = v;
+		LeaveCriticalSection(&g_lock);
+
+		_MESSAGE("ESD: dormiu/esperou %.0f min de jogo: sono +%.0f = %.0f", minutes, gain, v);
+		Update();			// aplica o desgaste do tempo passado (o original poe UpdateBasicNeeds na fila)
 	}
 
 	// BasicNeeds::SetNegativeBasicNeeds + GetResultNegativeData do original.

@@ -18,6 +18,11 @@ Uso pessoal (o autor está incontactável).
   O `ESDPlugin.log` diz "listas de alimentos encontradas" ou "nao encontradas".
 - Ainda sem: bónus de alimentos, mensagens, itens especiais (HearthFires), garrafas vazias.
 
+## Dormir (novo)
+- Ao fechar o menu Dormir/Esperar, o sono sobe `(2 x minutos) x fShortSleeper + minutos` (com fShortSleeper = 1: 3 por minuto dormido),
+  com o mesmo limite de antes (acima de 4320 passa a 2160). O desgaste do tempo passado é aplicado logo a seguir.
+  (Regra lida de BasicNeeds::ProcessEvent do TESSleepStartEvent e do MenuOpenCloseEvent no original.)
+
 ## O que ainda NÃO faz (próximas fases)
 - Debuffs, buffs, sons e expressões (`TaskDebuff`, `SetResult*`).
 - Eventos que alimentam os contadores de atividade (animação, golpes, magias) e o que cada evento faz às necessidades.

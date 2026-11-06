@@ -8,6 +8,10 @@
 #include "Papyrus.h"
 #include "Food.h"
 #include <Skyrim/Events/ScriptEvent.h>
+#include <Skyrim/Events/MenuEvent.h>
+#include <Skyrim/Menus/MenuManager.h>
+#include <Skyrim/Menus/UIStringHolder.h>
+#include <cstring>
 #include <Skyrim/Forms/PlayerCharacter.h>
 
 namespace
@@ -82,6 +86,71 @@ namespace
 	bool g_equipSinkAdded = false;
 
 	//-------------------------------------------------------
+	// sono: inicio (guarda a duracao) e fecho do menu Dormir/Esperar (repoe o sono)
+	//-------------------------------------------------------
+	class SleepStartSink : public BSTEventSink<TESSleepStartEvent>
+	{
+	public:
+		EventResult ReceiveEvent(TESSleepStartEvent *evn, BSTEventSource<TESSleepStartEvent> *src) override
+		{
+			if (evn)
+				Needs::SleepStart(evn->endTime - evn->startTime);
+			return kEvent_Continue;
+		}
+	};
+
+	class WakeTask : public TaskDelegate
+	{
+	public:
+		virtual void Run() override { Needs::SleepMenuClosed(); }
+		virtual void Dispose() override { delete this; }
+	};
+
+	class MenuSink : public BSTEventSink<MenuOpenCloseEvent>
+	{
+	public:
+		EventResult ReceiveEvent(MenuOpenCloseEvent *evn, BSTEventSource<MenuOpenCloseEvent> *src) override
+		{
+			if (evn && !evn->opening)
+			{
+				UIStringHolder *holder = UIStringHolder::GetSingleton();
+				if (holder && evn->menuName.c_str() && holder->sleepWaitMenu.c_str() &&
+					strcmp(evn->menuName.c_str(), holder->sleepWaitMenu.c_str()) == 0)
+				{
+					const SKSEPlugin *plugin = SKSEPlugin::GetSingleton();
+					const SKSETaskInterface *task = plugin ? plugin->GetInterface<SKSETaskInterface>() : NULL;
+					if (task)
+						task->AddTask(new WakeTask());
+				}
+			}
+			return kEvent_Continue;
+		}
+	};
+
+	SleepStartSink	g_sleepSink;
+	MenuSink		g_menuSink;
+	bool			g_sleepSinkAdded = false;
+	bool			g_menuSinkAdded = false;
+
+	void AddSleepSinks()
+	{
+		if (!g_sleepSinkAdded)
+		{
+			g_sleepStartEventSource.AddEventSink(&g_sleepSink);
+			g_sleepSinkAdded = true;
+		}
+		if (!g_menuSinkAdded)
+		{
+			MenuManager *mm = MenuManager::GetSingleton();
+			if (mm)
+			{
+				mm->GetMenuOpenCloseEventSource()->AddEventSink(&g_menuSink);
+				g_menuSinkAdded = true;
+			}
+		}
+	}
+
+	//-------------------------------------------------------
 	// cosave
 	//-------------------------------------------------------
 	void CosaveSave(SKSESerializationInterface *intfc)	{ Needs::Save(intfc); }
@@ -99,6 +168,7 @@ namespace
 		case SKSEMessagingInterface::kMessage_DataLoaded:
 			Food::FindLists();
 			if (!g_equipSinkAdded) { g_equipEventSource.AddEventSink(&g_equipSink); g_equipSinkAdded = true; }
+			AddSleepSinks();
 			break;
 		case SKSEMessagingInterface::kMessage_PreLoadGame:
 			Needs::SetReady(false);
@@ -106,6 +176,7 @@ namespace
 		case SKSEMessagingInterface::kMessage_PostLoadGame:
 		case SKSEMessagingInterface::kMessage_NewGame:
 			if (!Food::HasLists()) Food::FindLists();
+			AddSleepSinks();
 			Needs::ResyncClock();				// nao aplicar o tempo passado antes do carregamento
 			Needs::SetReady(true);
 			break;
