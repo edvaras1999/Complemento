@@ -27,7 +27,7 @@ namespace
 		NotificationNative *fn = (NotificationNative *)SKSEScript::GetFunction(state, BSFixedString("Debug"), BSFixedString("Notification"));
 		if (!fn || !fn->Validate(state))
 		{
-			_MESSAGE("ESD: nao encontrei Debug.Notification; as mensagens ficam desligadas");
+			_MESSAGE("ESD: nao encontrei Debug.Notification (funcao=%p); as mensagens ficam desligadas", fn);
 			g_notifyFailed = true;
 			return;
 		}

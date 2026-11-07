@@ -104,24 +104,79 @@ namespace
 		}
 	}
 
+	void LogVar(GFxMovieView *view, const char *path)
+	{
+		GFxValue v;
+		if (!view->GetVariable(&v, path))
+			_MESSAGE("ESD:   %s = (nao existe)", path);
+		else if (v.IsNumber())
+			_MESSAGE("ESD:   %s = %g", path, v.GetNumber());
+		else if (v.IsBool())
+			_MESSAGE("ESD:   %s = %s", path, v.GetBool() ? "true" : "false");
+		else if (v.IsObject())
+			_MESSAGE("ESD:   %s = objeto", path);
+		else
+			_MESSAGE("ESD:   %s = (tipo %d)", path, (int)v.GetType());
+	}
+
+	double StageSize(GFxMovieView *view, const char *path, double fallback)
+	{
+		GFxValue v;
+		if (view->GetVariable(&v, path) && v.IsNumber() && v.GetNumber() > 1.0)
+			return v.GetNumber();
+		return fallback;
+	}
+
 	void ApplyConfig(GFxMovieView *view)
 	{
 		bool enabled = Enabled();
+		_MESSAGE("ESD: a configurar o widget (ativado=%d)", enabled ? 1 : 0);
+		LogVar(view, "_root.widget");
 
 		GFxValue flag;
 		flag.SetBoolean(enabled);
-		view->Invoke("_root.widget.initNumbers", nullptr, &flag, 1);
+		_MESSAGE("ESD:   initNumbers -> %d", view->Invoke("_root.widget.initNumbers", nullptr, &flag, 1) ? 1 : 0);
 
 		InvokeNumber(view, "_root.widget.setAlpha", ESDSettings::GetFloat("fPrimaryAlpha", 90.0f));
 		InvokeNumber(view, "_root.widget.setScale", ESDSettings::GetFloat("fPrimaryScale", 80.0f));
 
+		// As posicoes das definicoes (-650, 330...) sao relativas ao centro de uma area de 1280x720.
+		// O SWF tem o seu proprio tamanho de palco; converte-se para esse palco e limita-se a ficar dentro dele.
+		double sw = StageSize(view, "Stage.width", 550.0);
+		double sh = StageSize(view, "Stage.height", 400.0);
+		double x = sw * 0.5 + ESDSettings::GetFloat("fPrimaryPosX", -650.0f) * sw / 1280.0;
+		double y = sh * 0.5 + ESDSettings::GetFloat("fPrimaryPosY", 330.0f) * sh / 720.0;
+		if (x < 20.0) x = 20.0;
+		if (x > sw - 20.0) x = sw - 20.0;
+		if (y < 20.0) y = 20.0;
+		if (y > sh - 20.0) y = sh - 20.0;
+		_MESSAGE("ESD:   palco %gx%g -> posicao %g,%g", sw, sh, x, y);
+
 		GFxValue pos[2];
-		pos[0].SetNumber(ESDSettings::GetFloat("fPrimaryPosX", -650.0f));
-		pos[1].SetNumber(ESDSettings::GetFloat("fPrimaryPosY", 330.0f));
-		view->Invoke("_root.widget.setPosition", nullptr, pos, 2);
+		pos[0].SetNumber(x);
+		pos[1].SetNumber(y);
+		_MESSAGE("ESD:   setPosition -> %d", view->Invoke("_root.widget.setPosition", nullptr, pos, 2) ? 1 : 0);
+
+		// garante que o clip esta onde queremos e visivel
+		GFxValue gx, gy, gv;
+		gx.SetNumber(x);
+		gy.SetNumber(y);
+		gv.SetBoolean(true);
+		view->SetVariable("_root.widget._x", gx);
+		view->SetVariable("_root.widget._y", gy);
+		view->SetVariable("_root.widget._visible", gv);
 
 		view->SetVisible(enabled && !g_hiddenByMenu);
 		ApplyValues(view, true);
+
+		LogVar(view, "_root.widget._x");
+		LogVar(view, "_root.widget._y");
+		LogVar(view, "_root.widget._width");
+		LogVar(view, "_root.widget._height");
+		LogVar(view, "_root.widget._alpha");
+		LogVar(view, "_root.widget._xscale");
+		LogVar(view, "_root.widget._visible");
+		_MESSAGE("ESD:   ocultado por menu=%d, view visivel=%d", g_hiddenByMenu ? 1 : 0, view->GetVisible() ? 1 : 0);
 	}
 
 	//-----------------------------------------------------------
@@ -138,7 +193,7 @@ namespace
 			if (LoadMovie(kSwfPath, GFxMovieView::SM_ShowAll, 0.0f))
 			{
 				menuDepth = 2;
-				flags = kType_DoNotDeleteOnClose | kType_DoNotPreventGameSave;
+				flags = kType_DoNotDeleteOnClose | kType_Unk0100 | kType_DoNotPreventGameSave;
 				_MESSAGE("ESD: widget carregado (Interface\\%s.swf)", kSwfPath);
 			}
 			else
@@ -154,11 +209,13 @@ namespace
 		{
 			if (message->type == UIMessage::kMessage_Open)
 			{
+				_MESSAGE("ESD: menu do widget aberto (view=%p)", view);
 				g_menu = this;
 				Widget::QueueConfigure();
 			}
 			else if (message->type == UIMessage::kMessage_Close)
 			{
+				_MESSAGE("ESD: menu do widget fechado");
 				if (g_menu == this) g_menu = nullptr;
 			}
 			return 2;
@@ -243,6 +300,7 @@ namespace Widget
 	{
 		if (!g_registered || g_menu || !Enabled()) return;
 		UIManager *ui = UIManager::GetSingleton();
+		_MESSAGE("ESD: a pedir a abertura do widget (ui=%p)", ui);
 		if (ui)
 			ui->AddMessage(kMenuName, UIMessage::kMessage_Open, nullptr);
 	}
