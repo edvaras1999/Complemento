@@ -1,6 +1,7 @@
 #include <SKSE.h>
 #include <SKSE/DebugLog.h>
 #include <SKSE/PapyrusInvoke.h>
+#include <SKSE/PapyrusEvents.h>
 #include <Skyrim/SkyrimVM.h>
 #include <cstdio>
 #include <map>
@@ -14,9 +15,19 @@ namespace
 	std::map<std::string, std::string>	g_messages;
 	bool								g_notifyFailed = false;
 
-	typedef _NativeFunction<BSScript::StaticFunctionTag, void, BSFixedString> NotificationNative;
+	// Argumentos de Debug.Notification(string): um BSFixedString empacotado como o SKSE faz nos eventos Papyrus
+	class NotifyArgs : public SKSEScript::FunctionArguments<BSFixedString>
+	{
+	public:
+		NotifyArgs(VMState *state, const BSFixedString &text) : SKSEScript::FunctionArguments<BSFixedString>(text)
+		{
+			m_state = state;
+		}
+	};
 
-	// Debug.Notification(string) - funcao nativa do jogo
+	int g_failures = 0;
+
+	// Chama Debug.Notification(texto) pela maquina virtual do Papyrus (chamada estatica na fila da VM)
 	void Notify(const char *text)
 	{
 		if (g_notifyFailed || !g_skyrimVM || !text || !*text)
@@ -24,14 +35,15 @@ namespace
 		VMState *state = g_skyrimVM->GetState();
 		if (!state)
 			return;
-		NotificationNative *fn = (NotificationNative *)SKSEScript::GetFunction(state, BSFixedString("Debug"), BSFixedString("Notification"));
-		if (!fn || !fn->Validate(state))
+
+		NotifyArgs args(state, BSFixedString(text));
+		BSScript::BSScriptVariable result;
+		if (!state->CallStaticFunction(BSFixedString("Debug"), BSFixedString("Notification"), &args, result))
 		{
-			_MESSAGE("ESD: nao encontrei Debug.Notification (funcao=%p); as mensagens ficam desligadas", fn);
-			g_notifyFailed = true;
-			return;
+			_MESSAGE("ESD: a chamada a Debug.Notification falhou (%d)", ++g_failures);
+			if (g_failures >= 5)
+				g_notifyFailed = true;
 		}
-		(*fn)(state, 0, NULL, BSFixedString(text));
 	}
 
 	// le uma string JSON a partir de p (que aponta para a aspa de abertura)
