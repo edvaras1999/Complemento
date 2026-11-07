@@ -96,6 +96,7 @@ namespace
 		Add("basicNeeds", "fCovertEmptyBottle", 0.0f);
 		Add("basicNeeds", "fTrundraCottonAmount", 3.0f);
 		Add("basicNeeds", "fExpressionDuration", 20.0f);
+		Add("basicNeeds", "bTowelRequiresWater", 0);			// novo (so neste port): 1 = a toalha de agua exige estar a nadar
 
 		Add("widget", "bIsEnableWidgetPrimary", 0);
 		Add("widget", "bIsEnableWidgetSecondary", 0);

@@ -92,7 +92,9 @@ namespace
 			GiveBack(form);
 			return;
 		}
-		if (!anywhere)
+		// A LE nao tem funcao para detetar agua rasa: por omissao a toalha de agua funciona em qualquer sitio.
+		// Com bTowelRequiresWater = 1 (em Settings.json) so funciona a nadar.
+		if (!anywhere && ESDSettings::GetFloat("bTowelRequiresWater", 0.0f) != 0.0f)
 		{
 			Actor *player = static_cast<Actor *>(g_thePlayer);
 			if (!player || !player->IsSwimming())
@@ -236,7 +238,8 @@ namespace Food
 
 		if (!mask) return;
 		Needs::ModMask(mask, data, true);
-		Messages::ShowItem((type == 2) ? "sTakeDrinks" : "sTakeFoods", form->GetName());
+		const char *itemName = item->fullName.c_str();		// nome completo da pocao (GetName() devolve vazio nestes itens)
+		Messages::ShowItem((type == 2) ? "sTakeDrinks" : "sTakeFoods", itemName ? itemName : "");
 		Debuff::Refresh(mask);
 		_MESSAGE("ESD: consumiu item %08X (tipo %u, peso %.2f): fome=%.0f sede=%.0f",
 			baseFormId, type, weight, Needs::Get(Needs::kHungry), Needs::Get(Needs::kThirsty));
