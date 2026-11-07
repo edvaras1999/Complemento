@@ -10,6 +10,7 @@
 #include "Messages.h"
 #include "Debuff.h"
 #include "Widget.h"
+#include "Overlay.h"
 #include <Skyrim/Events/ScriptEvent.h>
 #include <Skyrim/Events/MenuEvent.h>
 #include <Skyrim/Menus/MenuManager.h>
@@ -171,6 +172,7 @@ namespace
 		case SKSEMessagingInterface::kMessage_DataLoaded:
 			Food::FindLists();
 			Widget::Register();
+			Overlay::Register();
 			if (!g_equipSinkAdded) { g_equipEventSource.AddEventSink(&g_equipSink); g_equipSinkAdded = true; }
 			AddSleepSinks();
 			break;
@@ -185,6 +187,7 @@ namespace
 			Needs::SetReady(true);
 			Debuff::QueueRefresh(Needs::kAll);
 			Widget::Open();
+			Overlay::Open();
 			break;
 		}
 	}

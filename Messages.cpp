@@ -9,6 +9,7 @@
 
 #include "Messages.h"
 #include "Settings.h"
+#include "Overlay.h"
 
 namespace
 {
@@ -44,6 +45,15 @@ namespace
 			if (g_failures >= 5)
 				g_notifyFailed = true;
 		}
+	}
+
+	// mensagem no centro do ecra; se esse menu nao estiver aberto, usa a notificacao do canto
+	void Deliver(const char *text)
+	{
+		if (Overlay::IsOpen())
+			Overlay::Push(text);
+		else
+			Notify(text);
 	}
 
 	// le uma string JSON a partir de p (que aponta para a aspa de abertura)
@@ -108,7 +118,7 @@ namespace Messages
 		if (ESDSettings::GetFloat("bIsEnableMessage", 0.0f) == 0.0f) return;
 		std::map<std::string, std::string>::iterator it = g_messages.find(key);
 		if (it == g_messages.end()) return;
-		Notify(it->second.c_str());
+		Deliver(it->second.c_str());
 	}
 
 	void ShowItem(const char *key, const char *itemName)
@@ -119,6 +129,6 @@ namespace Messages
 		std::string s = it->second;
 		size_t pos = s.find("{}");
 		if (pos != std::string::npos) s.replace(pos, 2, itemName ? itemName : "");
-		Notify(s.c_str());
+		Deliver(s.c_str());
 	}
 }

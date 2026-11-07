@@ -16,24 +16,36 @@
 
 namespace
 {
-	const char *kMenuName = "ESD Widget Menu";
-	const char *kSwfPath = "EatingSleepingDrinking\\KNNWidgetMeter";		// Data\Interface\EatingSleepingDrinking\KNNWidgetMeter.swf
-
-	class WidgetMenu;
-	WidgetMenu	*g_menu = nullptr;
-	bool		g_hiddenByMenu = false;
-	bool		g_registered = false;
-	int			g_last[3] = { 9999, 9999, 9999 };		// ultimo valor enviado (com sinal) de fome, sede, sono
-
-	bool Enabled()
+	// 0 = widget principal (fome, sede, sono) ; 1 = widget opcional (corpo)
+	struct WidgetCfg
 	{
-		return ESDSettings::GetFloat("bIsEnableWidgetPrimary", 0.0f) != 0.0f;
+		const char *menuName;
+		const char *swf;
+		const char *enableKey;
+		const char *alphaKey;
+		const char *scaleKey;
+		const char *posXKey;
+		const char *posYKey;
+		float		defX, defY;
+	};
+
+	const WidgetCfg kCfg[2] =
+	{
+		{ "ESD Widget Menu",    "EatingSleepingDrinking\\KNNWidgetMeter",          "bIsEnableWidgetPrimary",   "fPrimaryAlpha",   "fPrimaryScale",   "fPrimaryPosX",   "fPrimaryPosY",   -650.0f, 330.0f },
+		{ "ESD Widget Op Menu", "EatingSleepingDrinking\\KNNWidgetMeter_Optional", "bIsEnableWidgetSecondary", "fSecondaryAlpha", "fSecondaryScale", "fSecondaryPosX", "fSecondaryPosY", -650.0f, 390.0f }
+	};
+
+	class IWidgetMenu;
+	IWidgetMenu	*g_menu[2] = { nullptr, nullptr };
+	bool		g_registered = false;
+	int			g_last[4] = { 9999, 9999, 9999, 9999 };		// ultimos valores enviados: fome, sede, sono, corpo
+
+	bool Enabled(int id)
+	{
+		return ESDSettings::GetFloat(kCfg[id].enableKey, 0.0f) != 0.0f;
 	}
 
-	// Converte o valor de uma necessidade em (percentagem 1..100, lado positivo/negativo), como o original:
-	//  acima do limiar  -> (v - limiar) / escalaSuperior * 100 (lado positivo)
-	//  igual ao limiar  -> 1 (lado positivo)
-	//  abaixo do limiar -> (v - limiar) / denominador * 100 (lado negativo)
+	// (percentagem 1..100, lado positivo/negativo) como no original
 	void Compute(float v, float threshold, float upperScale, float lowDenominator, int &mag, bool &positive)
 	{
 		float pct;
@@ -72,6 +84,19 @@ namespace
 			_MESSAGE("ESD: falhou ao chamar %s no widget", fn);
 	}
 
+	// setBodyHealthValue(percentagem): so um argumento
+	void SendBody(GFxMovieView *view, int mag, bool force)
+	{
+		if (!force && g_last[3] == mag)
+			return;
+		GFxValue arg;
+		arg.SetNumber((double)mag);
+		if (view->Invoke("_root.widget.setBodyHealthValue", nullptr, &arg, 1))
+			g_last[3] = mag;
+		else
+			_MESSAGE("ESD: falhou ao chamar setBodyHealthValue no widget opcional");
+	}
+
 	void InvokeNumber(GFxMovieView *view, const char *fn, double v)
 	{
 		GFxValue arg;
@@ -80,43 +105,42 @@ namespace
 			_MESSAGE("ESD: falhou ao chamar %s no widget", fn);
 	}
 
-	void ApplyValues(GFxMovieView *view, bool force)
+	void ApplyValues(GFxMovieView *view, int id, bool force)
 	{
 		ESDSettings::Core s = ESDSettings::GetCore();
 		float dayToDie = ESDSettings::GetFloat("fDayToDie", 0.0f);
 		int mag;
 		bool pos;
 
-		if (s.hungry)
+		if (id == 0)
 		{
-			Compute(Needs::Get(Needs::kHungry), 1440.0f, 1440.0f, (dayToDie > 0.0f) ? 4320.0f * dayToDie : 1440.0f, mag, pos);
-			SendMeter(view, "_root.widget.setHungryValue", 0, mag, pos, force);
+			if (s.hungry)
+			{
+				Compute(Needs::Get(Needs::kHungry), 1440.0f, 1440.0f, (dayToDie > 0.0f) ? 4320.0f * dayToDie : 1440.0f, mag, pos);
+				SendMeter(view, "_root.widget.setHungryValue", 0, mag, pos, force);
+			}
+			if (s.thirsty)
+			{
+				Compute(Needs::Get(Needs::kThirsty), 1440.0f, 1440.0f, (dayToDie > 0.0f) ? 4320.0f * dayToDie : 1440.0f, mag, pos);
+				SendMeter(view, "_root.widget.setThirstyValue", 1, mag, pos, force);
+			}
+			if (s.sleepiness)
+			{
+				Compute(Needs::Get(Needs::kSleepy), 720.0f, 2160.0f, (dayToDie > 0.0f) ? 1440.0f * dayToDie : 1440.0f, mag, pos);
+				SendMeter(view, "_root.widget.setSleepinessValue", 2, mag, pos, force);
+			}
 		}
-		if (s.thirsty)
+		else if (s.bodyHealth)
 		{
-			Compute(Needs::Get(Needs::kThirsty), 1440.0f, 1440.0f, (dayToDie > 0.0f) ? 4320.0f * dayToDie : 1440.0f, mag, pos);
-			SendMeter(view, "_root.widget.setThirstyValue", 1, mag, pos, force);
+			// corpo: percentagem = valor / (intervalo * 1440) * 100, entre 1 e 100 (1 se o valor for <= 0)
+			float v = Needs::Get(Needs::kBody);
+			float denom = s.washBodyInterval * 1440.0f;
+			float pct = (v <= 0.0f || denom <= 0.0f) ? 1.0f : floorf(v / denom * 100.0f);
+			int m = (int)fabsf(pct);
+			if (m < 1) m = 1;
+			if (m > 100) m = 100;
+			SendBody(view, m, force);
 		}
-		if (s.sleepiness)
-		{
-			Compute(Needs::Get(Needs::kSleepy), 720.0f, 2160.0f, (dayToDie > 0.0f) ? 1440.0f * dayToDie : 1440.0f, mag, pos);
-			SendMeter(view, "_root.widget.setSleepinessValue", 2, mag, pos, force);
-		}
-	}
-
-	void LogVar(GFxMovieView *view, const char *path)
-	{
-		GFxValue v;
-		if (!view->GetVariable(&v, path))
-			_MESSAGE("ESD:   %s = (nao existe)", path);
-		else if (v.IsNumber())
-			_MESSAGE("ESD:   %s = %g", path, v.GetNumber());
-		else if (v.IsBool())
-			_MESSAGE("ESD:   %s = %s", path, v.GetBool() ? "true" : "false");
-		else if (v.IsObject())
-			_MESSAGE("ESD:   %s = objeto", path);
-		else
-			_MESSAGE("ESD:   %s = (tipo %d)", path, (int)v.GetType());
 	}
 
 	double StageSize(GFxMovieView *view, const char *path, double fallback)
@@ -127,37 +151,44 @@ namespace
 		return fallback;
 	}
 
-	void ApplyConfig(GFxMovieView *view)
+	// Garante o estado de visibilidade: visivel se ativado e nenhum menu que pause o jogo estiver aberto.
+	void UpdateVisibility(GFxMovieView *view, int id)
 	{
-		bool enabled = Enabled();
-		_MESSAGE("ESD: a configurar o widget (ativado=%d)", enabled ? 1 : 0);
-		LogVar(view, "_root.widget");
+		MenuManager *mm = MenuManager::GetSingleton();
+		bool pauseOpen = mm && mm->numPauseGame != 0;
+		bool show = Enabled(id) && !pauseOpen;
+		if (view->GetVisible() != show)
+			view->SetVisible(show);
+	}
+
+	void ApplyConfig(GFxMovieView *view, int id)
+	{
+		const WidgetCfg &c = kCfg[id];
+		bool enabled = Enabled(id);
 
 		GFxValue flag;
 		flag.SetBoolean(enabled);
-		_MESSAGE("ESD:   initNumbers -> %d", view->Invoke("_root.widget.initNumbers", nullptr, &flag, 1) ? 1 : 0);
+		bool okInit = view->Invoke("_root.widget.initNumbers", nullptr, &flag, 1);
 
-		InvokeNumber(view, "_root.widget.setAlpha", ESDSettings::GetFloat("fPrimaryAlpha", 90.0f));
-		InvokeNumber(view, "_root.widget.setScale", ESDSettings::GetFloat("fPrimaryScale", 80.0f));
+		InvokeNumber(view, "_root.widget.setAlpha", ESDSettings::GetFloat(c.alphaKey, 90.0f));
+		InvokeNumber(view, "_root.widget.setScale", ESDSettings::GetFloat(c.scaleKey, 80.0f));
 
-		// As posicoes das definicoes (-650, 330...) sao relativas ao centro de uma area de 1280x720.
-		// O SWF tem o seu proprio tamanho de palco; converte-se para esse palco e limita-se a ficar dentro dele.
+		// As posicoes das definicoes sao relativas ao centro de uma area de 1280x720; converte-se para o palco do SWF
+		// e limita-se a ficar dentro dele.
 		double sw = StageSize(view, "Stage.width", 550.0);
 		double sh = StageSize(view, "Stage.height", 400.0);
-		double x = sw * 0.5 + ESDSettings::GetFloat("fPrimaryPosX", -650.0f) * sw / 1280.0;
-		double y = sh * 0.5 + ESDSettings::GetFloat("fPrimaryPosY", 330.0f) * sh / 720.0;
+		double x = sw * 0.5 + ESDSettings::GetFloat(c.posXKey, c.defX) * sw / 1280.0;
+		double y = sh * 0.5 + ESDSettings::GetFloat(c.posYKey, c.defY) * sh / 720.0;
 		if (x < 20.0) x = 20.0;
 		if (x > sw - 20.0) x = sw - 20.0;
 		if (y < 20.0) y = 20.0;
 		if (y > sh - 20.0) y = sh - 20.0;
-		_MESSAGE("ESD:   palco %gx%g -> posicao %g,%g", sw, sh, x, y);
 
 		GFxValue pos[2];
 		pos[0].SetNumber(x);
 		pos[1].SetNumber(y);
-		_MESSAGE("ESD:   setPosition -> %d", view->Invoke("_root.widget.setPosition", nullptr, pos, 2) ? 1 : 0);
+		bool okPos = view->Invoke("_root.widget.setPosition", nullptr, pos, 2);
 
-		// garante que o clip esta onde queremos e visivel
 		GFxValue gx, gy, gv;
 		gx.SetNumber(x);
 		gy.SetNumber(y);
@@ -166,57 +197,50 @@ namespace
 		view->SetVariable("_root.widget._y", gy);
 		view->SetVariable("_root.widget._visible", gv);
 
-		view->SetVisible(enabled && !g_hiddenByMenu);
-		ApplyValues(view, true);
+		UpdateVisibility(view, id);
+		ApplyValues(view, id, true);
 
-		LogVar(view, "_root.widget._x");
-		LogVar(view, "_root.widget._y");
-		LogVar(view, "_root.widget._width");
-		LogVar(view, "_root.widget._height");
-		LogVar(view, "_root.widget._alpha");
-		LogVar(view, "_root.widget._xscale");
-		LogVar(view, "_root.widget._visible");
-		_MESSAGE("ESD:   ocultado por menu=%d, view visivel=%d", g_hiddenByMenu ? 1 : 0, view->GetVisible() ? 1 : 0);
+		_MESSAGE("ESD: widget %d configurado (ativado=%d, palco %gx%g, posicao %g,%g, initNumbers=%d, setPosition=%d, visivel=%d)",
+			id, enabled ? 1 : 0, sw, sh, x, y, okInit ? 1 : 0, okPos ? 1 : 0, view->GetVisible() ? 1 : 0);
 	}
 
 	//-----------------------------------------------------------
-	// menu
+	// menus
 	//-----------------------------------------------------------
-	class WidgetMenu : public IMenu
+	class IWidgetMenu : public IMenu
 	{
 	public:
 		using GRefCountBaseStatImpl::operator new;
 		using GRefCountBaseStatImpl::operator delete;
+		int m_id;
 
-		WidgetMenu()
+		IWidgetMenu(int id) : m_id(id)
 		{
-			if (LoadMovie(kSwfPath, GFxMovieView::SM_ShowAll, 0.0f))
+			if (LoadMovie(kCfg[id].swf, GFxMovieView::SM_ShowAll, 0.0f))
 			{
-				menuDepth = 2;
+				menuDepth = (UInt8)(2 + id);
 				flags = kType_DoNotDeleteOnClose | kType_Unk0100 | kType_DoNotPreventGameSave;
-				_MESSAGE("ESD: widget carregado (Interface\\%s.swf)", kSwfPath);
+				_MESSAGE("ESD: widget %d carregado (Interface\\%s.swf)", id, kCfg[id].swf);
 			}
 			else
-				_MESSAGE("ERRO: nao consegui carregar Interface\\%s.swf", kSwfPath);
+				_MESSAGE("ERRO: nao consegui carregar Interface\\%s.swf", kCfg[id].swf);
 		}
 
-		virtual ~WidgetMenu()
+		virtual ~IWidgetMenu()
 		{
-			if (g_menu == this) g_menu = nullptr;
+			if (g_menu[m_id] == this) g_menu[m_id] = nullptr;
 		}
 
 		virtual UInt32 ProcessMessage(UIMessage *message) override
 		{
 			if (message->type == UIMessage::kMessage_Open)
 			{
-				_MESSAGE("ESD: menu do widget aberto (view=%p)", view);
-				g_menu = this;
+				g_menu[m_id] = this;
 				Widget::QueueConfigure();
 			}
 			else if (message->type == UIMessage::kMessage_Close)
 			{
-				_MESSAGE("ESD: menu do widget fechado");
-				if (g_menu == this) g_menu = nullptr;
+				if (g_menu[m_id] == this) g_menu[m_id] = nullptr;
 			}
 			return 2;
 		}
@@ -232,11 +256,18 @@ namespace
 
 		void Run() override
 		{
-			if (!g_menu) return;
-			GFxMovieView *view = g_menu->GetMovieView();
-			if (!view) return;
-			if (m_configure) ApplyConfig(view);
-			else ApplyValues(view, false);
+			for (int id = 0; id < 2; id++)
+			{
+				if (!g_menu[id]) continue;
+				GFxMovieView *view = g_menu[id]->GetMovieView();
+				if (!view) continue;
+				if (m_configure) ApplyConfig(view, id);
+				else
+				{
+					ApplyValues(view, id, false);
+					UpdateVisibility(view, id);		// vigia: nunca fica escondido por engano
+				}
+			}
 		}
 
 		void Dispose() override { delete this; }
@@ -250,30 +281,29 @@ namespace
 			task->AddUITask(new WidgetUITask(configure));
 	}
 
-	// esconde o widget enquanto houver menus que pausam o jogo (diario, inventario...), como o QuickLoot
+	// esconde os widgets enquanto houver menus que pausam o jogo (diario, inventario...), mostra-os ao fechar
 	class WidgetMenuSink : public BSTEventSink<MenuOpenCloseEvent>
 	{
 	public:
 		EventResult ReceiveEvent(MenuOpenCloseEvent *evn, BSTEventSource<MenuOpenCloseEvent> *src) override
 		{
-			if (!g_menu || !evn) return kEvent_Continue;
-			GFxMovieView *view = g_menu->GetMovieView();
+			if (!evn) return kEvent_Continue;
 			MenuManager *mm = MenuManager::GetSingleton();
-			if (!view || !mm) return kEvent_Continue;
+			if (!mm) return kEvent_Continue;
 
-			if (evn->opening)
+			for (int id = 0; id < 2; id++)
 			{
-				IMenu *menu = mm->GetMenu(evn->menuName);
-				if (menu && (menu->flags & IMenu::kType_PauseGame) != 0)
+				if (!g_menu[id]) continue;
+				GFxMovieView *view = g_menu[id]->GetMovieView();
+				if (!view) continue;
+
+				if (evn->opening)
 				{
-					g_hiddenByMenu = true;
-					view->SetVisible(false);
+					IMenu *menu = mm->GetMenu(evn->menuName);
+					if (menu && (menu->flags & IMenu::kType_PauseGame) != 0)
+						view->SetVisible(false);
 				}
-			}
-			else if (mm->numPauseGame == 0)
-			{
-				g_hiddenByMenu = false;
-				if (Enabled())
+				else if (mm->numPauseGame == 0 && Enabled(id))
 					view->SetVisible(true);
 			}
 			return kEvent_Continue;
@@ -290,29 +320,32 @@ namespace Widget
 		if (g_registered) return;
 		MenuManager *mm = MenuManager::GetSingleton();
 		if (!mm) return;
-		mm->Register(kMenuName, []() -> IMenu * { return new WidgetMenu(); });
+		mm->Register(kCfg[0].menuName, []() -> IMenu * { return new IWidgetMenu(0); });
+		mm->Register(kCfg[1].menuName, []() -> IMenu * { return new IWidgetMenu(1); });
 		mm->GetMenuOpenCloseEventSource()->AddEventSink(&g_sink);
 		g_registered = true;
-		_MESSAGE("ESD: menu do widget registado");
+		_MESSAGE("ESD: menus dos widgets registados");
 	}
 
 	void Open()
 	{
-		if (!g_registered || g_menu || !Enabled()) return;
+		if (!g_registered) return;
 		UIManager *ui = UIManager::GetSingleton();
-		_MESSAGE("ESD: a pedir a abertura do widget (ui=%p)", ui);
-		if (ui)
-			ui->AddMessage(kMenuName, UIMessage::kMessage_Open, nullptr);
+		if (!ui) return;
+		for (int id = 0; id < 2; id++)
+			if (!g_menu[id] && Enabled(id))
+				ui->AddMessage(kCfg[id].menuName, UIMessage::kMessage_Open, nullptr);
 	}
 
 	void QueueConfigure()
 	{
-		if (g_menu) QueueTask(true);
-		else Open();
+		bool anyOpen = g_menu[0] || g_menu[1];
+		if (anyOpen) QueueTask(true);
+		Open();			// abre o que esteja ativado e ainda fechado (ao abrir, configura-se sozinho)
 	}
 
 	void QueueUpdate()
 	{
-		if (g_menu) QueueTask(false);
+		if (g_menu[0] || g_menu[1]) QueueTask(false);
 	}
 }

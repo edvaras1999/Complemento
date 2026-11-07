@@ -3,6 +3,10 @@
 #include <Skyrim/Forms/TESForm.h>
 #include <Skyrim/Forms/BGSListForm.h>
 #include <Skyrim/Forms/AlchemyItem.h>
+#include <Skyrim/Forms/Actor.h>
+#include <Skyrim/Forms/PlayerCharacter.h>
+#include <SKSE/PapyrusInvoke.h>
+#include <Skyrim/SkyrimVM.h>
 #include <windows.h>
 
 #include "Food.h"
@@ -58,6 +62,58 @@ namespace
 				if (*it == formId) return true;
 		}
 		return false;
+	}
+
+
+	typedef _NativeFunction<TESObjectREFR, void, TESForm *, SInt32, bool> AddItemNative;
+
+	// ObjectReference.AddItem(item, 1, silencioso): devolve a toalha quando nao pode ser usada
+	void GiveBack(TESForm *form)
+	{
+		if (!form || !g_skyrimVM || !g_thePlayer) return;
+		VMState *state = g_skyrimVM->GetState();
+		if (!state) return;
+		AddItemNative *fn = (AddItemNative *)SKSEScript::GetFunction(state, TESObjectREFR::kTypeID, "AddItem");
+		if (!fn || !fn->Validate(state))
+		{
+			_MESSAGE("ESD: nao consegui devolver o item (ObjectReference.AddItem nao encontrada)");
+			return;
+		}
+		(*fn)(state, 0, g_thePlayer, form, 1, true);
+	}
+
+	// Toalhas do ESD (_ESDTowelPotion 0x841: so na agua; _ESDTowelAnyWherePotion 0x837: em qualquer sitio).
+	// Lavar tira um ciclo completo ao corpo: 1440 x fWashBodyInterval; o que sobrar ate 720 passa a 0.
+	void UseTowel(TESForm *form, bool anywhere)
+	{
+		ESDSettings::Core s = ESDSettings::GetCore();
+		if (!s.bodyHealth)
+		{
+			GiveBack(form);
+			return;
+		}
+		if (!anywhere)
+		{
+			Actor *player = static_cast<Actor *>(g_thePlayer);
+			if (!player || !player->IsSwimming())
+			{
+				Messages::Show("sCanNotDoIt");
+				GiveBack(form);
+				_MESSAGE("ESD: toalha de agua usada fora de agua: devolvida");
+				return;
+			}
+		}
+
+		Needs::ValueData data;
+		for (int i = 0; i < 8; i++) data.v[i] = 0.0f;
+		data.v[3] = -1440.0f * s.washBodyInterval;
+		Needs::ModMask(Needs::kBody, data, true);
+		float body = Needs::Get(Needs::kBody);
+		if (body > 0.0f && body <= 720.0f)
+			Needs::Set(Needs::kBody, 0.0f, true);
+
+		Debuff::Refresh(Needs::kBody);
+		_MESSAGE("ESD: lavou o corpo (%s): corpo=%.0f", anywhere ? "em qualquer sitio" : "na agua", Needs::Get(Needs::kBody));
 	}
 
 	UInt32 Classify(UInt32 formId)
@@ -124,6 +180,9 @@ namespace Food
 
 		TESForm *form = LookupFormByID(baseFormId);
 		if (!form || form->formType != FormType::Potion) return;
+
+		if (baseFormId == FormId(0x841)) { UseTowel(form, false); return; }
+		if (baseFormId == FormId(0x837)) { UseTowel(form, true); return; }
 
 		float weight = (float)form->GetWeight();
 		if (!(weight > 0.0f)) return;

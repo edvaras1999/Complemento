@@ -101,6 +101,7 @@
     <ClCompile Include="Messages.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Needs.cpp" />
+    <ClCompile Include="Overlay.cpp" />
     <ClCompile Include="Papyrus.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="Widget.cpp" />
@@ -118,6 +119,7 @@
     <ClInclude Include="Food.h" />
     <ClInclude Include="Messages.h" />
     <ClInclude Include="Needs.h" />
+    <ClInclude Include="Overlay.h" />
     <ClInclude Include="Papyrus.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Widget.h" />

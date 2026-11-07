@@ -18,6 +18,16 @@ Uso pessoal (o autor está incontactável).
   O `ESDPlugin.log` diz "listas de alimentos encontradas" ou "nao encontradas".
 - Ainda sem: bónus de alimentos, mensagens, itens especiais (HearthFires), garrafas vazias.
 
+## Mensagens no centro do ecrã, lavar e toalhas (novo)
+- As mensagens aparecem no centro do ecrã (com sombra, até 4 linhas, desvanecem-se em ~4 s). Precisam do ficheiro
+  `Data\Interface\EatingSleepingDrinking\ESDMessage.swf` (está em `Interface\...` neste projeto; copiar para o mod instalado).
+  Se esse menu não abrir, usa-se a notificação normal do canto.
+- Toalhas: `_ESDTowelPotion` só funciona a nadar (se não, devolve a toalha e diz "Won't be able to do it..."); `_ESDTowelAnyWherePotion` funciona em qualquer sítio.
+  Lavar tira `1440 x fWashBodyInterval` ao corpo; se sobrar entre 0 e 720, fica a 0. A animação de lavar (Action Animations) ainda não existe.
+- Widget opcional ("Secondary" no MCM) mostra o corpo: percentagem `valor / (intervalo x 1440) x 100` (1..100). Mesma lógica de posição e visibilidade do principal;
+  agora há uma vigia que o volta a mostrar se ficar escondido por engano.
+- Limitação: a "água" da toalha de água é "estar a nadar"; a LE não tem aqui uma função para detetar só estar dentro de água.
+
 ## HUD (novo)
 - Menu Scaleform próprio que carrega `Data\Interface\EatingSleepingDrinking\KNNWidgetMeter.swf` (o mesmo do original) e mostra fome, sede e sono.
 - Liga-se no MCM (widget "Primary"). Posição, escala e transparência vêm de `fPrimaryPosX/PosY/Scale/Alpha`.
