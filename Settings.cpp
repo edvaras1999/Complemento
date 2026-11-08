@@ -96,7 +96,6 @@ namespace
 		Add("basicNeeds", "fCovertEmptyBottle", 0.0f);
 		Add("basicNeeds", "fTrundraCottonAmount", 3.0f);
 		Add("basicNeeds", "fExpressionDuration", 20.0f);
-		Add("basicNeeds", "bTowelRequiresWater", 0);			// novo (so neste port): 1 = a toalha de agua exige estar a nadar
 
 		Add("widget", "bIsEnableWidgetPrimary", 0);
 		Add("widget", "bIsEnableWidgetSecondary", 0);
@@ -123,6 +122,14 @@ namespace
 		Add("hotkey", "bIsEnableAdvancedConvenientHotkey", 0);
 
 		AddStr("messages", "sLanguageFile", "Messages_English.json");
+
+		// Opcoes proprias deste port (nao existem no MCM do ESD): editar em Settings.json, grupo "port"
+		Add("port", "bTowelRequiresWater", 0);		// 1 = a toalha de agua so funciona a nadar
+		Add("port", "bMessageCentered", 1);			// 1 = mensagens no centro do ecra; 0 = notificacao normal do canto
+		Add("port", "fMessageSeconds", 4.5f);		// tempo que cada mensagem fica no ecra
+		Add("port", "fMessageOffsetY", 0.0f);		// desloca as mensagens na vertical (area de 1280x720; positivo = para baixo)
+		Add("port", "bActivityDecay", 1);			// 0 = desliga o desgaste por atividade (passos, golpes, magias, gritos)
+		Add("port", "fActivityScale", 1.0f);		// multiplicador da atividade (1 = como o original)
 
 		Add("buffs", "fHealth", 2.0f);
 		Add("buffs", "fStamina", 2.0f);
@@ -296,13 +303,14 @@ namespace ESDSettings
 		FILE *f = fopen(path.c_str(), "wb");
 		if (!f) { LeaveCriticalSection(&g_cs); return false; }
 
-		const char *groups[] = { "basicNeeds", "widget", "hotkey", "messages", "buffs", "expressions" };
+		const char *groups[] = { "basicNeeds", "widget", "hotkey", "messages", "buffs", "port", "expressions" };
+		const int kGroups = 7;
 		fputs("{\n", f);
-		for (int gi = 0; gi < 6; gi++)
+		for (int gi = 0; gi < kGroups; gi++)
 		{
 			fprintf(f, "\t\"%s\": {\n", groups[gi]);
 			bool first = true;
-			if (gi == 5)
+			if (!strcmp(groups[gi], "expressions"))
 			{
 				const char *subs[] = { "expression", "phoneme", "modifier" };
 				for (int si = 0; si < 3; si++)
@@ -333,7 +341,7 @@ namespace ESDSettings
 					first = false;
 				}
 			}
-			fprintf(f, "\n\t}%s\n", (gi < 5) ? "," : "");
+			fprintf(f, "\n\t}%s\n", (gi < kGroups - 1) ? "," : "");
 		}
 		fputs("}\n", f);
 		fclose(f);

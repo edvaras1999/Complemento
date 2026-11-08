@@ -50,7 +50,7 @@ namespace
 	// mensagem no centro do ecra; se esse menu nao estiver aberto, usa a notificacao do canto
 	void Deliver(const char *text)
 	{
-		if (Overlay::IsOpen())
+		if (Overlay::IsOpen() && ESDSettings::GetFloat("bMessageCentered", 1.0f) != 0.0f)
 			Overlay::Push(text);
 		else
 			Notify(text);

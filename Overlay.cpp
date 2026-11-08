@@ -11,14 +11,21 @@
 #include <vector>
 
 #include "Overlay.h"
+#include "Settings.h"
 
 namespace
 {
 	const char *kMenuName = "ESD Message Menu";
 	const char *kSwfPath = "EatingSleepingDrinking\\ESDMessage";		// Data\Interface\EatingSleepingDrinking\ESDMessage.swf
 
-	const DWORD kLifeMs = 4500;			// tempo total de cada linha
-	const DWORD kFadeStartMs = 3600;	// a partir daqui a ultima linha vai desvanecendo
+	DWORD LifeMs()
+	{
+		float s = ESDSettings::GetFloat("fMessageSeconds", 4.5f);
+		if (s < 1.0f) s = 1.0f;
+		if (s > 30.0f) s = 30.0f;
+		return (DWORD)(s * 1000.0f);
+	}
+	DWORD FadeStartMs() { DWORD l = LifeMs(); return l > 1200 ? l - 900 : l / 2; }	// ultimos ~0,9 s: desvanece
 	const size_t kMaxLines = 4;
 
 	struct Line
@@ -65,11 +72,12 @@ namespace
 	{
 		std::string	m_lastHtml;
 		int			m_lastAlpha;
+		float		m_lastOffset;
 	public:
 		using GRefCountBaseStatImpl::operator new;
 		using GRefCountBaseStatImpl::operator delete;
 
-		MessageMenu() : m_lastAlpha(-1)
+		MessageMenu() : m_lastAlpha(-1), m_lastOffset(-99999.0f)
 		{
 			if (LoadMovie(kSwfPath, GFxMovieView::SM_ShowAll, 0.0f))
 			{
@@ -111,7 +119,7 @@ namespace
 			EnterCriticalSection(&g_lock);
 			for (size_t i = 0; i < g_lines.size();)
 			{
-				if (now - g_lines[i].start > kLifeMs) g_lines.erase(g_lines.begin() + i);
+				if (now - g_lines[i].start > LifeMs()) g_lines.erase(g_lines.begin() + i);
 				else i++;
 			}
 			lines = g_lines;
@@ -122,12 +130,25 @@ namespace
 			if (!lines.empty())
 			{
 				DWORD age = now - lines.back().start;
-				if (age > kFadeStartMs)
+				DWORD life = LifeMs(), fade = FadeStartMs();
+				if (age > fade)
 				{
-					alpha = 100 - (int)((age - kFadeStartMs) * 100 / (kLifeMs - kFadeStartMs));
+					alpha = 100 - (int)((age - fade) * 100 / (life - fade));
 					if (alpha < 0) alpha = 0;
 				}
 				html = Html(lines, "#FFFFFF");
+			}
+
+			// posicao vertical (configuravel): 298 e a posicao base do campo no SWF (area de 720 de altura)
+			float offset = ESDSettings::GetFloat("fMessageOffsetY", 0.0f);
+			if (offset != m_lastOffset)
+			{
+				GFxValue y1, y2;
+				y1.SetNumber(298.0 + offset);
+				y2.SetNumber(300.0 + offset);
+				view->SetVariable("_root.msg._y", y1);
+				view->SetVariable("_root.shadow._y", y2);
+				m_lastOffset = offset;
 			}
 
 			if (html != m_lastHtml)

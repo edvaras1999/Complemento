@@ -6,6 +6,7 @@
 
 #include "Activity.h"
 #include "Needs.h"
+#include "Settings.h"
 
 namespace
 {
@@ -22,24 +23,26 @@ namespace Activity
 {
 	void OnAction(UInt32 type)
 	{
+		if (ESDSettings::GetFloat("bActivityDecay", 1.0f) == 0.0f) return;
+		float k = ESDSettings::GetFloat("fActivityScale", 1.0f);
 		switch (type)
 		{
 		case 0:		// golpe
 		case 6:		// arco solto
-			Needs::AddActivity(kWeapon, 0.25f);
+			Needs::AddActivity(kWeapon, 0.25f * k);
 			break;
 		case 1:		// magia (inicio)
 		case 2:		// magia (disparo)
-			Needs::AddActivity(kSpell, 0.15f);
+			Needs::AddActivity(kSpell, 0.15f * k);
 			break;
 		case 3:		// grito (inicio)
 		case 4:		// grito (disparo)
-			Needs::AddActivity(kShout, 0.5f);
+			Needs::AddActivity(kShout, 0.5f * k);
 			break;
 		case 5:		// arco puxado
 		case 8:		// arma sacada
 		case 10:	// arma guardada
-			Needs::SetActivity(kWeapon, 0.1f);		// o original faz "= 0.1", nao soma
+			Needs::SetActivity(kWeapon, 0.1f * k);		// o original faz "= 0.1", nao soma
 			break;
 		}
 	}
@@ -50,6 +53,8 @@ namespace Activity
 	void Sample()
 	{
 		if (!g_thePlayer) { g_have = false; return; }
+		if (ESDSettings::GetFloat("bActivityDecay", 1.0f) == 0.0f) { g_have = false; return; }
+		float k = ESDSettings::GetFloat("fActivityScale", 1.0f);
 
 		float x = g_thePlayer->pos.x;
 		float y = g_thePlayer->pos.y;
@@ -66,13 +71,13 @@ namespace Activity
 
 		UInt32 f = g_thePlayer->flags04;
 		if (f & 0x400)								// a nadar: uma braçada cada ~80 unidades
-			Needs::AddActivity(kRun, dist / 80.0f * 0.05f);
+			Needs::AddActivity(kRun, dist / 80.0f * 0.05f * k);
 		else if (f & 0x100)							// sprint
-			Needs::AddActivity(kSprint, dist / 130.0f * 0.1f);
+			Needs::AddActivity(kSprint, dist / 130.0f * 0.1f * k);
 		else if (f & 0x40)							// correr (modo normal do jogo)
-			Needs::AddActivity(kRun, dist / 90.0f * 0.05f);
+			Needs::AddActivity(kRun, dist / 90.0f * 0.05f * k);
 		else										// andar
-			Needs::AddActivity(kWalk, dist / 60.0f * 0.025f);
+			Needs::AddActivity(kWalk, dist / 60.0f * 0.025f * k);
 	}
 
 	void Reset()

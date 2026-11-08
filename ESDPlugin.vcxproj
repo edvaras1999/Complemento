@@ -96,6 +96,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Activity.cpp" />
     <ClCompile Include="Debuff.cpp" />
     <ClCompile Include="Food.cpp" />
     <ClCompile Include="Messages.cpp" />
@@ -115,6 +116,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Activity.h" />
     <ClInclude Include="Debuff.h" />
     <ClInclude Include="Food.h" />
     <ClInclude Include="Messages.h" />

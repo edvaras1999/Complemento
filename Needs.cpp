@@ -184,6 +184,14 @@ namespace Needs
 		LeaveCriticalSection(&g_lockAct);
 	}
 
+	void SetActivity(int slot, float value)
+	{
+		if (slot < 0 || slot > 6) return;
+		EnterCriticalSection(&g_lockAct);
+		g_act[slot] = value;
+		LeaveCriticalSection(&g_lockAct);
+	}
+
 	void SetReady(bool ready)
 	{
 		g_ready = ready;

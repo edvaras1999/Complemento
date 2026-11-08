@@ -7,6 +7,10 @@
 #include "Settings.h"
 #include "Debuff.h"
 #include "Widget.h"
+#include "Food.h"
+#include "Messages.h"
+#include <Skyrim/Forms/TESObjectREFR.h>
+#include <cmath>
 
 //========================================================
 // Funcoes nativas usadas pelos scripts do ESD (ESDUtility.psc e _ESDMCM.psc).
@@ -64,6 +68,51 @@ namespace
 		return Needs::Get(type);
 	}
 
+
+	// IsTeammateFavor(): no original pergunta ao jogador se esta num "favor" de um companheiro.
+	// Sem equivalente conhecido na LE: devolve false (nao esta), o que deixa os scripts seguirem.
+	bool N_IsTeammateFavor()
+	{
+		return false;
+	}
+
+	// GetHeadingAngle(from, to): angulo (graus, -180..180) entre a direcao em que "from" olha e a direcao de "from" para "to"
+	float N_GetHeadingAngle(TESObjectREFR *from, TESObjectREFR *to)
+	{
+		if (!from || !to) return -180.0f;
+		const double kPi = 3.14159265358979323846;
+		double ang = atan2((double)(to->pos.x - from->pos.x), (double)(to->pos.y - from->pos.y)) - (double)from->rot.z;
+		while (ang > kPi) ang -= 2.0 * kPi;
+		while (ang < -kPi) ang += 2.0 * kPi;
+		return (float)(ang * 180.0 / kPi);
+	}
+
+	// ShowMessage(chave): mostra uma das mensagens do ESD (os scripts usam sCanNotDoIt e sBarrelGetEmpty)
+	void N_ShowMessage(BSFixedString messageType)
+	{
+		if (messageType.c_str())
+			Messages::Show(messageType.c_str());
+	}
+
+	class TakeMealsTask : public TaskDelegate
+	{
+		UInt32 m_id;
+	public:
+		TakeMealsTask(UInt32 id) : m_id(id) {}
+		virtual void Run() override { Food::OnEquip(m_id); }
+		virtual void Dispose() override { delete this; }
+	};
+
+	// TakeMeals(form): como se o jogador tivesse acabado de consumir o item (usado ao ensinar um alimento novo)
+	void N_TakeMeals(TESForm *form)
+	{
+		if (!form) return;
+		const SKSEPlugin *plugin = SKSEPlugin::GetSingleton();
+		const SKSETaskInterface *task = plugin ? plugin->GetInterface<SKSETaskInterface>() : NULL;
+		if (task)
+			task->AddTask(new TakeMealsTask(form->formID));
+	}
+
 	float N_GetESDSetting(BSFixedString name)
 	{
 		return ESDSettings::GetFloat(name.c_str(), 0.0f);
@@ -92,6 +141,10 @@ bool Papyrus::RegisterFunctions(VMState *state)
 	SKSEScript::RegisterFunction("ESDUtility", "GetBasicNeeds", &N_GetBasicNeeds, state);
 	SKSEScript::RegisterFunction("ESDUtility", "SetBasicNeeds", &N_SetBasicNeeds, state);
 	SKSEScript::RegisterFunction("ESDUtility", "ModBasicNeeds", &N_ModBasicNeeds, state);
+	SKSEScript::RegisterFunction("ESDUtility", "IsTeammateFavor", &N_IsTeammateFavor, state);
+	SKSEScript::RegisterFunction("ESDUtility", "GetHeadingAngle", &N_GetHeadingAngle, state);
+	SKSEScript::RegisterFunction("ESDUtility", "ShowMessage", &N_ShowMessage, state);
+	SKSEScript::RegisterFunction("ESDUtility", "TakeMeals", &N_TakeMeals, state);
 	SKSEScript::RegisterFunction("_ESDMCM", "GetESDSetting", &N_GetESDSetting, state);
 	SKSEScript::RegisterFunction("_ESDMCM", "GetESDSettingString", &N_GetESDSettingString, state);
 	SKSEScript::RegisterFunction("_ESDMCM", "SetESDSetting", &N_SetESDSetting, state);

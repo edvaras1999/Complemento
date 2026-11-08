@@ -31,6 +31,7 @@ namespace Needs
 	void ModMask(UInt32 mask, ValueData &data, bool saveReference);
 
 	void AddActivity(int slot, float amount);				// slot 0..6 (contadores de atividade)
+	void SetActivity(int slot, float value);				// atribui em vez de somar (como o original em alguns eventos)
 
 	void SetReady(bool ready);								// jogo carregado: o relogio pode correr
 	void ResyncClock();										// volta a ler o relogio do jogo (sem aplicar o intervalo perdido)

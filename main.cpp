@@ -1,6 +1,8 @@
 #include <SKSE.h>
 #include <SKSE/PluginAPI.h>
 #include <SKSE/DebugLog.h>
+#include <SKSE/SKSEEvents.h>
+#include <Skyrim/Forms/Actor.h>
 #include <windows.h>
 
 #include "Needs.h"
@@ -11,6 +13,7 @@
 #include "Debuff.h"
 #include "Widget.h"
 #include "Overlay.h"
+#include "Activity.h"
 #include <Skyrim/Events/ScriptEvent.h>
 #include <Skyrim/Events/MenuEvent.h>
 #include <Skyrim/Menus/MenuManager.h>
@@ -34,14 +37,27 @@ namespace
 
 	UpdateTask g_task;
 
+	class SampleTask : public TaskDelegate
+	{
+	public:
+		virtual void Run() override { Activity::Sample(); }
+		virtual void Dispose() override {}
+	};
+
+	SampleTask g_sampleTask;
+
+	// a cada segundo: amostra a atividade (passos); a cada 5 segundos: passagem do tempo das necessidades
 	DWORD WINAPI Worker(LPVOID)
 	{
+		int n = 0;
 		for (;;)
 		{
-			Sleep(5000);
+			Sleep(1000);
 			const SKSEPlugin *plugin = SKSEPlugin::GetSingleton();
 			const SKSETaskInterface *task = plugin ? plugin->GetInterface<SKSETaskInterface>() : NULL;
-			if (task)
+			if (!task) continue;
+			task->AddTask(&g_sampleTask);
+			if (++n % 5 == 0)
 				task->AddTask(&g_task);
 		}
 		return 0;
@@ -155,6 +171,24 @@ namespace
 	}
 
 	//-------------------------------------------------------
+	// acoes do jogador (golpes, magias, gritos) -> desgaste por atividade
+	//-------------------------------------------------------
+	class ActionSink : public BSTEventSink<SKSEActionEvent>
+	{
+	public:
+		EventResult ReceiveEvent(SKSEActionEvent *evn, BSTEventSource<SKSEActionEvent> *src) override
+		{
+			if (evn && g_thePlayer && evn->actor == (Actor *)g_thePlayer)
+				Activity::OnAction(evn->type);
+			return kEvent_Continue;
+		}
+	};
+
+	ActionSink						g_actionSink;
+	bool							g_actionSinkAdded = false;
+	const SKSEMessagingInterface	*g_messaging = nullptr;
+
+	//-------------------------------------------------------
 	// cosave
 	//-------------------------------------------------------
 	void CosaveSave(SKSESerializationInterface *intfc)	{ Needs::Save(intfc); }
@@ -175,6 +209,11 @@ namespace
 			Overlay::Register();
 			if (!g_equipSinkAdded) { g_equipEventSource.AddEventSink(&g_equipSink); g_equipSinkAdded = true; }
 			AddSleepSinks();
+			if (!g_actionSinkAdded && g_messaging)
+			{
+				BSTEventSource<SKSEActionEvent> *src = (BSTEventSource<SKSEActionEvent> *)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_ActionEvent);
+				if (src) { src->AddEventSink(&g_actionSink); g_actionSinkAdded = true; _MESSAGE("ESD: eventos de acao ligados"); }
+			}
 			break;
 		case SKSEMessagingInterface::kMessage_PreLoadGame:
 			Needs::SetReady(false);
@@ -183,6 +222,7 @@ namespace
 		case SKSEMessagingInterface::kMessage_NewGame:
 			if (!Food::HasLists()) Food::FindLists();
 			AddSleepSinks();
+			Activity::Reset();
 			Needs::ResyncClock();				// nao aplicar o tempo passado antes do carregamento
 			Needs::SetReady(true);
 			Debuff::QueueRefresh(Needs::kAll);
@@ -228,6 +268,7 @@ public:
 		}
 
 		const SKSEMessagingInterface *msg = GetInterface(SKSEMessagingInterface::Version_1);
+		g_messaging = msg;
 		if (msg)
 			msg->RegisterListener("SKSE", &OnMessage);
 
