@@ -11,9 +11,10 @@
 | Toalhas e lavar o corpo | feito (a animação de lavar vem do Action Animations) |
 | Desgaste por atividade (golpes, magias, gritos, passos) | feito (passos estimados pela distância, não por evento de animação) |
 | Funções nativas dos scripts (cama, barril de hidromel) | feito: IsTeammateFavor, GetHeadingAngle, ShowMessage, TakeMeals |
-| Níveis visuais de sujidade (3 feitiços) | por fazer |
-| Sons (estômago a roncar) e expressões do rosto | por fazer |
-| Garrafas vazias ao beber ("CovertBottle") | por fazer |
+| Níveis visuais de sujidade (3 feitiços) | feito (ativar "Dirty body" no MCM) |
+| Sons: estômago a roncar, bocejo, moscas | feito (a cada 90 s como o original; sem o som de sede nem a versão feminina do bocejo, ids desconhecidos) |
+| Expressões do rosto | por fazer |
+| Garrafas vazias ao beber ("CovertBottle") | por fazer: o original depende de palavras-chave distribuídas por KID (ficheiro ESDDrinksDefinition_KID.ini); preciso de os FormIDs das bebidas do Skyrim.esm |
 | Detetar alimento novo e ensinar ao ESD (caixa de mensagem) | por fazer (precisa de caixa de mensagem) |
 | Agulha de tricô (fazer toalhas com algodão da tundra) | por fazer |
 | Alma de dragão (evento OnPlayerAbsorbDragonSoul) | por fazer |

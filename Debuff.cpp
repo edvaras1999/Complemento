@@ -7,6 +7,8 @@
 #include <Skyrim/Forms/Actor.h>
 #include <Skyrim/Forms/SpellItem.h>
 #include <Skyrim/Forms/PlayerCharacter.h>
+#include <Skyrim/Forms/TESSound.h>
+#include <windows.h>
 
 #include "Debuff.h"
 #include "Needs.h"
@@ -26,6 +28,19 @@ namespace
 	const UInt32 kNotWearySpell		= 0x82E;	// buff "descansado"
 	const UInt32 kBodyAbility		= 0x829;	// debuff de sujidade
 	const UInt32 kCleanBodySpell	= 0x81F;	// buff "corpo limpo"
+
+	// niveis de sujidade (cada um e um feitico do .esp); limiares como multiplos do intervalo de lavagem x 1440
+	const UInt32 kDirtyLevel1 = 0x82D;		// > intervalo x  480
+	const UInt32 kDirtyLevel2 = 0x825;		// > intervalo x  960
+	const UInt32 kDirtyLevel3 = 0x82B;		// > intervalo x 1440
+
+	// sons (SOUN do .esp)
+	const UInt32 kSoundGrowl	= 0x806;	// estomago a roncar (fome)
+	const UInt32 kSoundBuzzing	= 0x807;	// moscas (sujo)
+	const UInt32 kSoundYawn		= 0x808;	// bocejo (sono)
+	const DWORD  kSoundCooldownMs = 90000;	// o original espera 90 s entre sons do mesmo tipo
+
+	DWORD g_lastGrowl = 0, g_lastBuzz = 0, g_lastYawn = 0;
 
 	// estados ja anunciados (evita repetir a mensagem a cada ciclo)
 	enum { kMsgHungry = 1, kMsgThirsty = 2, kMsgTired = 4, kMsgDirty = 8, kMsgBathSoon = 0x10 };
@@ -96,6 +111,57 @@ namespace
 		}
 	}
 
+
+	typedef _NativeFunction<TESSound, int, TESObjectREFR *> SoundPlayNative;
+	bool g_soundFailed = false;
+
+	// Sound.Play(fonte): toca o som no jogador (no maximo uma vez por 90 s para cada tipo)
+	void PlaySoundOnPlayer(UInt32 localId, DWORD &lastPlayed)
+	{
+		if (g_soundFailed || !g_skyrimVM || !g_thePlayer) return;
+		DWORD now = GetTickCount();
+		if (lastPlayed != 0 && now - lastPlayed < kSoundCooldownMs) return;
+
+		UInt32 id = Food::FormId(localId);
+		TESForm *f = id ? LookupFormByID(id) : NULL;
+		if (!f || f->formType != FormType::Sound) return;
+
+		VMState *state = g_skyrimVM->GetState();
+		if (!state) return;
+		SoundPlayNative *fn = (SoundPlayNative *)SKSEScript::GetFunction(state, TESSound::kTypeID, "Play");
+		if (!fn || !fn->Validate(state))
+		{
+			_MESSAGE("ESD: nao encontrei Sound.Play; os sons ficam desligados");
+			g_soundFailed = true;
+			return;
+		}
+		lastPlayed = now;
+		(*fn)(state, 0, static_cast<TESSound *>(f), (TESObjectREFR *)g_thePlayer);
+	}
+
+	// Sujidade por niveis: escolhe o feitico do nivel atual e remove os outros dois.
+	void ApplyDirtyLevels(Actor *actor, float bodyValue, float interval)
+	{
+		UInt32 want = 0;
+		if (bodyValue > interval * 1440.0f)		want = kDirtyLevel3;
+		else if (bodyValue > interval * 960.0f)	want = kDirtyLevel2;
+		else if (bodyValue > interval * 480.0f)	want = kDirtyLevel1;
+
+		const UInt32 all[3] = { kDirtyLevel1, kDirtyLevel2, kDirtyLevel3 };
+		for (int i = 0; i < 3; i++)
+			if (all[i] != want)
+				RemoveSpellFrom(actor, all[i]);
+		if (want)
+			AddSpellTo(actor, want);
+	}
+
+	void RemoveDirtyLevels(Actor *actor)
+	{
+		RemoveSpellFrom(actor, kDirtyLevel1);
+		RemoveSpellFrom(actor, kDirtyLevel2);
+		RemoveSpellFrom(actor, kDirtyLevel3);
+	}
+
 	class RefreshTask : public TaskDelegate
 	{
 		UInt32 m_mask;
@@ -128,6 +194,11 @@ namespace Debuff
 		if (s.hungry && (mask & Needs::kHungry) && ESDSettings::GetFloat("bIsEnableHungryBuff", 0.0f) != 0.0f)
 			ApplyState(actor, Needs::Get(Needs::kHungry), 1440.0f, kStuffedSpell, kHungryAbility, kMsgHungry, "sGetHungry");
 
+		// som de fome (estomago a roncar), a cada 90 s enquanto tiver fome
+		if (s.hungry && (mask & Needs::kHungry) && ESDSettings::GetFloat("bIsEnableHungryGrowl", 0.0f) != 0.0f
+			&& Needs::Get(Needs::kHungry) < 1440.0f)
+			PlaySoundOnPlayer(kSoundGrowl, g_lastGrowl);
+
 		// sede: limiar 1440
 		if (s.thirsty && (mask & Needs::kThirsty) && ESDSettings::GetFloat("bIsEnableThirstyBuff", 0.0f) != 0.0f)
 			ApplyState(actor, Needs::Get(Needs::kThirsty), 1440.0f, kQuenchedSpell, kThirstyAbility, kMsgThirsty, "sGetThirsy");
@@ -135,6 +206,22 @@ namespace Debuff
 		// sono: limiar 720 (valor baixo = cansado)
 		if (s.sleepiness && (mask & Needs::kSleepy) && ESDSettings::GetFloat("bIsEnableSleepinessBuff", 0.0f) != 0.0f)
 			ApplyState(actor, Needs::Get(Needs::kSleepy), 720.0f, kNotWearySpell, kSleepyAbility, kMsgTired, "sGetTired");
+
+		// bocejo quando esta cansado (sono abaixo de 720)
+		if (s.sleepiness && (mask & Needs::kSleepy) && Needs::Get(Needs::kSleepy) < 720.0f)
+			PlaySoundOnPlayer(kSoundYawn, g_lastYawn);
+
+		// sujidade por niveis (so se ativada no MCM); se estiver desativada, retira os feiticos
+		if ((mask & Needs::kBody))
+		{
+			if (s.bodyHealth && ESDSettings::GetFloat("bIsEnableDirtyBody", 0.0f) != 0.0f)
+				ApplyDirtyLevels(actor, Needs::Get(Needs::kBody), s.washBodyInterval);
+			else
+				RemoveDirtyLevels(actor);
+			// moscas quando esta muito sujo
+			if (s.bodyHealth && Needs::Get(Needs::kBody) > s.washBodyInterval * 1440.0f)
+				PlaySoundOnPlayer(kSoundBuzzing, g_lastBuzz);
+		}
 
 		// corpo: o valor SOBE com o tempo. limite = intervalo * 1440 (sujo); aviso de banho a partir de (intervalo-1)*1440+720
 		if (s.bodyHealth && (mask & Needs::kBody) && ESDSettings::GetFloat("bIsEnableBodyHealthBuff", 0.0f) != 0.0f)

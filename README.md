@@ -18,6 +18,12 @@ Uso pessoal (o autor está incontactável).
   O `ESDPlugin.log` diz "listas de alimentos encontradas" ou "nao encontradas".
 - Ainda sem: bónus de alimentos, mensagens, itens especiais (HearthFires), garrafas vazias.
 
+## Sujidade por níveis e sons (novo)
+- Com "Dirty body" ativado no MCM, o corpo recebe um de 3 feitiços de sujidade: acima de `intervalo x 480`, `x 960` e `x 1440`
+  (com o intervalo normal 3: 1440, 2880 e 4320). Abaixo do primeiro nível, os feitiços saem.
+- Sons, no máximo um de cada tipo a cada 90 s: estômago a roncar (fome, se "Hungry growl" estiver ativo), bocejo (sono abaixo de 720),
+  moscas (corpo acima de `intervalo x 1440`). Tocam no jogador pela função `Sound.Play` do jogo.
+
 ## Desgaste por atividade e funções Papyrus em falta (novo)
 - Funções nativas novas (a cama portátil e o barril de hidromel chamavam-nas e, sem elas, o Papyrus abortava a ativação):
   `IsTeammateFavor` (devolve false), `GetHeadingAngle`, `ShowMessage`, `TakeMeals`.
