@@ -14,6 +14,7 @@
 #include "Settings.h"
 #include "Messages.h"
 #include "Debuff.h"
+#include "Events.h"
 
 namespace
 {
@@ -181,7 +182,17 @@ namespace Food
 		if (!g_found || !baseFormId) return;
 
 		TESForm *form = LookupFormByID(baseFormId);
-		if (!form || form->formType != FormType::Potion) return;
+		if (!form) return;
+
+		// agulha de trico do ESD (arma 0x834): faz uma toalha com algodao da tundra
+		if (form->formType == FormType::Weapon && baseFormId == FormId(0x834))
+		{
+			if (ESDSettings::GetCore().bodyHealth)
+				Events::KnittingNeedle();
+			return;
+		}
+
+		if (form->formType != FormType::Potion) return;
 
 		if (baseFormId == FormId(0x841)) { UseTowel(form, false); return; }
 		if (baseFormId == FormId(0x837)) { UseTowel(form, true); return; }
@@ -192,7 +203,15 @@ namespace Food
 		if (!item->IsFood()) return;
 
 		UInt32 type = Classify(baseFormId);
-		if (!type || type == 0x10) return;
+		if (!type)
+		{
+			// alimento que o ESD nao conhece: pergunta ao jogador (script do ESD) se e comida, sopa, bebida...
+			ESDSettings::Core known = ESDSettings::GetCore();
+			if (known.hungry || known.thirsty)
+				Events::DetectNewFood(form);
+			return;
+		}
+		if (type == 0x10) return;
 
 		ESDSettings::Core s = ESDSettings::GetCore();
 		float intFoods = ESDSettings::GetFloat("fIntensityFoods", 1.0f);

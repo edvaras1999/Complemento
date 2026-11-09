@@ -18,6 +18,13 @@ Uso pessoal (o autor está incontactável).
   O `ESDPlugin.log` diz "listas de alimentos encontradas" ou "nao encontradas".
 - Ainda sem: bónus de alimentos, mensagens, itens especiais (HearthFires), garrafas vazias.
 
+## Alimento novo e agulha de tricô (novo)
+- Se consumires um alimento que o ESD não conhece (poção "de comer" fora das 5 listas), a DLL envia o evento `OnDetectNewFood` ao script do ESD,
+  que mostra a caixa "o que é isto?" (comida, sopa, bebida, crua, nada) e acrescenta o item à lista certa; depois repõe como se o tivesses acabado de consumir.
+- Agulha de tricô (arma `0x834` do ESD): se tiveres algodão da tundra (`fTrundraCottonAmount`, 3 por omissão), envia `OnEquippedKnittingNeedle` e o script faz uma toalha;
+  se não tiveres, mostra "Not enough Tundra Cotton...".
+- Ainda sem: o evento da alma de dragão (liga-se ao Action Animations).
+
 ## Sujidade por níveis e sons (novo)
 - Com "Dirty body" ativado no MCM, o corpo recebe um de 3 feitiços de sujidade: acima de `intervalo x 480`, `x 960` e `x 1440`
   (com o intervalo normal 3: 1440, 2880 e 4320). Abaixo do primeiro nível, os feitiços saem.

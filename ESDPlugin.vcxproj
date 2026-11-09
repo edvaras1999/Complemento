@@ -98,6 +98,7 @@
   <ItemGroup>
     <ClCompile Include="Activity.cpp" />
     <ClCompile Include="Debuff.cpp" />
+    <ClCompile Include="Events.cpp" />
     <ClCompile Include="Food.cpp" />
     <ClCompile Include="Messages.cpp" />
     <ClCompile Include="main.cpp" />
@@ -118,6 +119,7 @@
   <ItemGroup>
     <ClInclude Include="Activity.h" />
     <ClInclude Include="Debuff.h" />
+    <ClInclude Include="Events.h" />
     <ClInclude Include="Food.h" />
     <ClInclude Include="Messages.h" />
     <ClInclude Include="Needs.h" />
