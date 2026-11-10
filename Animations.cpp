@@ -3,6 +3,7 @@
 #include <Skyrim/Forms/TESForm.h>
 #include <Skyrim/Forms/Actor.h>
 #include <Skyrim/Forms/PlayerCharacter.h>
+#include <Skyrim/FileIO/TESFile.h>
 #include <Skyrim/FileIO/TESDataHandler.h>
 #include <windows.h>
 #include <cstdio>
