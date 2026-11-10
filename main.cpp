@@ -14,6 +14,8 @@
 #include "Widget.h"
 #include "Overlay.h"
 #include "Activity.h"
+#include "Expression.h"
+#include "Hotkeys.h"
 #include <Skyrim/Events/ScriptEvent.h>
 #include <Skyrim/Events/MenuEvent.h>
 #include <Skyrim/Menus/MenuManager.h>
@@ -40,7 +42,7 @@ namespace
 	class SampleTask : public TaskDelegate
 	{
 	public:
-		virtual void Run() override { Activity::Sample(); }
+		virtual void Run() override { Activity::Sample(); Expression::Tick(); }
 		virtual void Dispose() override {}
 	};
 
@@ -114,7 +116,10 @@ namespace
 		EventResult ReceiveEvent(TESSleepStartEvent *evn, BSTEventSource<TESSleepStartEvent> *src) override
 		{
 			if (evn)
+			{
 				Needs::SleepStart(evn->endTime - evn->startTime);
+				Expression::Clear();
+			}
 			return kEvent_Continue;
 		}
 	};
@@ -281,6 +286,7 @@ public:
 		Needs::Init();
 		ESDSettings::Load();
 		Messages::Load();
+		Hotkeys::Start();
 		CreateThread(NULL, 0, &Worker, NULL, 0, NULL);
 	}
 } thePlugin;

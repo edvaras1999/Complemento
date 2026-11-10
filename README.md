@@ -18,6 +18,14 @@ Uso pessoal (o autor está incontactável).
   O `ESDPlugin.log` diz "listas de alimentos encontradas" ou "nao encontradas".
 - Ainda sem: bónus de alimentos, mensagens, itens especiais (HearthFires), garrafas vazias.
 
+## Expressões do rosto e atalho de refeições (novo)
+- Expressões (substituem o script `_ESDExpressionAlias`): com "Expression" ativado no MCM, ao entrares num estado mau (fome, sede, cansaço, sujo) aplica a expressão
+  e os fonemas/modificadores das definições durante `fExpressionDuration` segundos, e depois repõe o rosto (também ao dormir). Prioridade: cansado > fome/sede > sujo.
+  Usa `Actor.SetExpressionOverride` e `MfgConsoleFunc` (SKSE).
+- Atalho de refeições (`iMealsHotkey`, escolhido no MCM): come ou bebe o que fizer mais falta (a menor das duas necessidades), escolhendo no inventário o item que cobre a falta com menos desperdício.
+  Funciona fora de menus e com o jogo em primeiro plano; o consumo é detetado pelo ESD como qualquer outro.
+- O atalho "conveniente" (beber água em rios, recolher a cama portátil) ainda não existe.
+
 ## Alimento novo e agulha de tricô (novo)
 - Se consumires um alimento que o ESD não conhece (poção "de comer" fora das 5 listas), a DLL envia o evento `OnDetectNewFood` ao script do ESD,
   que mostra a caixa "o que é isto?" (comida, sopa, bebida, crua, nada) e acrescenta o item à lista certa; depois repõe como se o tivesses acabado de consumir.

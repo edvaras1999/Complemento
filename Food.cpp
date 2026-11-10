@@ -171,6 +171,11 @@ namespace Food
 
 	bool HasLists() { return g_found; }
 
+	UInt32 TypeOf(UInt32 formId)
+	{
+		return g_found ? Classify(formId) : 0;
+	}
+
 	UInt32 FormId(UInt32 localId)
 	{
 		if (!g_found) return 0;
