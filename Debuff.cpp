@@ -16,6 +16,7 @@
 #include "Settings.h"
 #include "Messages.h"
 #include "Widget.h"
+#include "Expression.h"
 
 namespace
 {
@@ -107,6 +108,7 @@ namespace
 			{
 				Messages::Show(msgKey);
 				AddFlag(msgFlag);
+				Expression::Trigger((msgFlag == kMsgTired) ? 3 : 2);		// cansado > fome/sede
 			}
 		}
 	}
@@ -237,7 +239,7 @@ namespace Debuff
 			{
 				RemoveSpellFrom(actor, kCleanBodySpell);
 				AddSpellTo(actor, kBodyAbility);
-				if (!HasFlag(kMsgDirty)) { Messages::Show("sGetDirtyBody"); AddFlag(kMsgDirty); }
+				if (!HasFlag(kMsgDirty)) { Messages::Show("sGetDirtyBody"); AddFlag(kMsgDirty); Expression::Trigger(1); }
 			}
 			else
 			{

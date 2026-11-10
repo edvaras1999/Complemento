@@ -13,13 +13,14 @@
 | Funções nativas dos scripts (cama, barril de hidromel) | feito: IsTeammateFavor, GetHeadingAngle, ShowMessage, TakeMeals |
 | Níveis visuais de sujidade (3 feitiços) | feito (ativar "Dirty body" no MCM) |
 | Sons: estômago a roncar, bocejo, moscas | feito (a cada 90 s como o original; sem o som de sede nem a versão feminina do bocejo, ids desconhecidos) |
-| Expressões do rosto | por fazer |
+| Expressões do rosto | feito (na DLL, sem script; ativar "Expression" no MCM) |
 | Garrafas vazias ao beber ("CovertBottle") | por fazer: o original depende de palavras-chave distribuídas por KID (ficheiro ESDDrinksDefinition_KID.ini); preciso de os FormIDs das bebidas do Skyrim.esm |
 | Detetar alimento novo e ensinar ao ESD (caixa de mensagem) | por fazer (precisa de caixa de mensagem) |
 | Agulha de tricô (fazer toalhas com algodão da tundra) | por fazer |
 | Alma de dragão (evento OnPlayerAbsorbDragonSoul) | por fazer |
-| Atalhos de teclado (refeições, conveniência) e comandos de consola | por fazer |
-| Condição do OAR (ESDBasicNeeds) | por fazer (a LE já tem OAR) |
+| Atalho de refeições | feito (tecla do MCM) |
+| Atalho "conveniente" (beber em rios, recolher cama portátil) e comandos de consola | por fazer (a água não é detetável nesta LE) |
+| Condição do OAR (ESDBasicNeeds) | por fazer: preciso do cabeçalho da API do OAR para LE. Alternativa já possível (OAR e DAR): usar nas condições os feitiços do ESD (ver secção 5) |
 | Action Animations (animações de comer, beber, lavar, etc.) | por fazer (outra DLL) |
 
 ## 2. Onde o Papyrus do ESD trabalha de facto
@@ -39,3 +40,11 @@
 
 ## 4. Opções próprias do port (Settings.json, grupo "port")
 bTowelRequiresWater, bMessageCentered, fMessageSeconds, fMessageOffsetY, bActivityDecay, fActivityScale.
+
+## 5. Animações por estado, com OAR ou DAR, sem código novo
+Os estados das necessidades já existem no jogo como feitiços (adicionados e retirados pela DLL), por isso as condições de OAR e de DAR podem usá-los:
+- Fome: `_ESDHungryAbilitySpell` (debuff); bem alimentado: `_ESDStuffedSpell`.
+- Sede: `_ESDThirstyAbilitySpell`; sem sede: `_ESDQuenchedThirstSpell`.
+- Sono: `_ESDSleepyAbilitySpell` (cansado); descansado: `_ESDNotWearySpell`.
+- Corpo: `_ESDBodyAbilitySpell` (sujo); limpo: `_ESDCleanBodySpell`. Níveis de sujidade: `0x82D`, `0x825`, `0x82B`.
+Condição tipo: "HasSpell / HasMagicEffect do jogador" com o feitiço do estado que queres.
