@@ -18,6 +18,15 @@ Uso pessoal (o autor está incontactável).
   O `ESDPlugin.log` diz "listas de alimentos encontradas" ou "nao encontradas".
 - Ainda sem: bónus de alimentos, mensagens, itens especiais (HearthFires), garrafas vazias.
 
+## Action Animations integrado (novo)
+- O Action Animations passa a viver dentro desta DLL (chamadas diretas em vez de mensagens entre DLLs). Lê as listas XML de `Data\SKSE\Plugins\ActionAnimations\`
+  (as animações, e `AlchemyItems\*.xml` com os itens do Skyrim) e toca o evento de animação no jogador. Precisa dos ficheiros do AA instalados (esp, behaviors convertidos, XML).
+- Ao consumir comida ou bebida: escolhe a lista pela postura (parado, sentado ou a andar) e toca a animação do item. Condições do AA: sem nadar, sem voar,
+  sem estar caído, sem arma sacada. Só uma animação de cada vez (pela duração do XML).
+- O ESD pede as animações de lavar o corpo (tipo 8) e fazer toalhas (tipo 4); ficam prontos os tipos 1, 2, 20, 40 e 80 (água de fonte, encher garrafa, cama portátil, alma de dragão, barril) para quando o ESD os pedir.
+- Natives do MCM do AA: `_ActionAnimationsMCM.Register/GetSetting/SetSetting` (as definições ficam no grupo "aa" do Settings.json).
+- Ainda sem: ler livros e notas, tirar e voltar a pôr armadura durante a animação, e as páginas do MCM do AA que listam armaduras.
+
 ## Expressões do rosto e atalho de refeições (novo)
 - Expressões (substituem o script `_ESDExpressionAlias`): com "Expression" ativado no MCM, ao entrares num estado mau (fome, sede, cansaço, sujo) aplica a expressão
   e os fonemas/modificadores das definições durante `fExpressionDuration` segundos, e depois repõe o rosto (também ao dormir). Prioridade: cansado > fome/sede > sujo.

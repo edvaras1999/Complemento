@@ -13,6 +13,7 @@
 #include "Food.h"
 #include "Settings.h"
 #include "Messages.h"
+#include "Animations.h"
 
 namespace
 {
@@ -93,6 +94,7 @@ namespace Events
 			return;
 		}
 		SKSEScript::QueueEvent(state, quest, BSFixedString("OnEquippedKnittingNeedle"), (TESObjectREFR *)g_thePlayer, (SInt32)1, (SInt32)needed);
+		Animations::PlayType(4);
 		_MESSAGE("ESD: agulha de trico: 1 toalha por %d de algodao da tundra", needed);
 	}
 }

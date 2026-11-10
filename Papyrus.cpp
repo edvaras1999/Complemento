@@ -113,6 +113,19 @@ namespace
 			task->AddTask(new TakeMealsTask(form->formID));
 	}
 
+
+	// _ActionAnimationsMCM: Register(), GetSetting(nome), SetSetting(nome, valor)
+	void N_AARegister() {}
+	float N_AAGetSetting(BSFixedString name)
+	{
+		return ESDSettings::GetFloat(name.c_str(), 0.0f);
+	}
+	void N_AASetSetting(BSFixedString name, float value)
+	{
+		if (ESDSettings::SetFloat(name.c_str(), value))
+			ESDSettings::Save();
+	}
+
 	float N_GetESDSetting(BSFixedString name)
 	{
 		return ESDSettings::GetFloat(name.c_str(), 0.0f);
@@ -145,6 +158,9 @@ bool Papyrus::RegisterFunctions(VMState *state)
 	SKSEScript::RegisterFunction("ESDUtility", "GetHeadingAngle", &N_GetHeadingAngle, state);
 	SKSEScript::RegisterFunction("ESDUtility", "ShowMessage", &N_ShowMessage, state);
 	SKSEScript::RegisterFunction("ESDUtility", "TakeMeals", &N_TakeMeals, state);
+	SKSEScript::RegisterFunction("_ActionAnimationsMCM", "Register", &N_AARegister, state);
+	SKSEScript::RegisterFunction("_ActionAnimationsMCM", "GetSetting", &N_AAGetSetting, state);
+	SKSEScript::RegisterFunction("_ActionAnimationsMCM", "SetSetting", &N_AASetSetting, state);
 	SKSEScript::RegisterFunction("_ESDMCM", "GetESDSetting", &N_GetESDSetting, state);
 	SKSEScript::RegisterFunction("_ESDMCM", "GetESDSettingString", &N_GetESDSettingString, state);
 	SKSEScript::RegisterFunction("_ESDMCM", "SetESDSetting", &N_SetESDSetting, state);

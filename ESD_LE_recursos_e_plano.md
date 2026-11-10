@@ -21,7 +21,8 @@
 | Atalho de refeições | feito (tecla do MCM) |
 | Atalho "conveniente" (beber em rios, recolher cama portátil) e comandos de consola | por fazer (a água não é detetável nesta LE) |
 | Condição do OAR (ESDBasicNeeds) | por fazer: preciso do cabeçalho da API do OAR para LE. Alternativa já possível (OAR e DAR): usar nas condições os feitiços do ESD (ver secção 5) |
-| Action Animations (animações de comer, beber, lavar, etc.) | por fazer (outra DLL) |
+| Action Animations: animações ao comer e beber (parado, sentado, a andar), lavar o corpo, fazer toalhas | feito (integrado nesta DLL; precisa dos ficheiros do AA instalados) |
+| Action Animations: ler livros e notas, armadura tirada e reposta, água de fonte, encher garrafa, cama portátil, alma de dragão, barril | por fazer (os tipos já existem no código; falta o ESD os pedir e a armadura) |
 
 ## 2. Onde o Papyrus do ESD trabalha de facto
 - Os 4 scripts de efeito (fome, sede, sono, corpo): só correm quando um buff ou debuff entra ou sai (OnEffectStart/OnEffectFinish), com 2 chamadas a GetESDSetting.
@@ -48,3 +49,14 @@ Os estados das necessidades já existem no jogo como feitiços (adicionados e re
 - Sono: `_ESDSleepyAbilitySpell` (cansado); descansado: `_ESDNotWearySpell`.
 - Corpo: `_ESDBodyAbilitySpell` (sujo); limpo: `_ESDCleanBodySpell`. Níveis de sujidade: `0x82D`, `0x825`, `0x82B`.
 Condição tipo: "HasSpell / HasMagicEffect do jogador" com o feitiço do estado que queres.
+
+## 6. Revisão do que falta no ESD (por ordem de valor)
+1. Testar o que já está escrito mas nunca correu: cama e funções nativas, atividade (já confirmada pelo log), alimento novo, agulha de tricô, expressões, atalho de refeições, sujidade e sons, animações.
+2. Efeitos dos buffs e debuffs na DLL (retirar os 4 scripts de efeitos): precisa de alterar o .esp e de guardar no save o que a DLL aplicou. Só com teste cuidadoso.
+3. Garrafas vazias ao beber: já há os códigos das bebidas (ficheiros AlchemyItems do AA), falta ler no original a regra por tipo de garrafa.
+4. Atalho "conveniente" (beber de um rio, recolher a cama portátil): a água não é detetável nesta LE; a cama portátil precisa do alvo da mira.
+5. Alma de dragão (evento para o script do ESD e animação do AA).
+6. Condição do OAR (ESDBasicNeeds): precisa do cabeçalho da API do OAR para LE; entretanto OAR e DAR podem usar os feitiços do ESD (secção 5).
+7. Widget: ícones por necessidade, deslocamentos finos e o ícone de embriaguez.
+8. Bónus de alimentos (IsFoodBonus) e o caso especial do HearthFires.
+9. Comandos de consola.

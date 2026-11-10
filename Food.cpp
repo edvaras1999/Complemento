@@ -15,6 +15,7 @@
 #include "Messages.h"
 #include "Debuff.h"
 #include "Events.h"
+#include "Animations.h"
 
 namespace
 {
@@ -116,6 +117,7 @@ namespace
 			Needs::Set(Needs::kBody, 0.0f, true);
 
 		Debuff::Refresh(Needs::kBody);
+		Animations::PlayType(8);
 		_MESSAGE("ESD: lavou o corpo (%s): corpo=%.0f", anywhere ? "em qualquer sitio" : "na agua", Needs::Get(Needs::kBody));
 	}
 
@@ -265,6 +267,7 @@ namespace Food
 		const char *itemName = item->fullName.c_str();		// nome completo da pocao (GetName() devolve vazio nestes itens)
 		Messages::ShowItem((type == 2) ? "sTakeDrinks" : "sTakeFoods", itemName ? itemName : "");
 		Debuff::Refresh(mask);
+		Animations::OnConsume(form, type == 2);
 		_MESSAGE("ESD: consumiu item %08X (tipo %u, peso %.2f): fome=%.0f sede=%.0f",
 			baseFormId, type, weight, Needs::Get(Needs::kHungry), Needs::Get(Needs::kThirsty));
 		// FALTA: mensagens, debuffs/widget, bonus de alimentos, itens especiais (HearthFires, garrafas).

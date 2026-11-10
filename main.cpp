@@ -16,6 +16,7 @@
 #include "Activity.h"
 #include "Expression.h"
 #include "Hotkeys.h"
+#include "Animations.h"
 #include <Skyrim/Events/ScriptEvent.h>
 #include <Skyrim/Events/MenuEvent.h>
 #include <Skyrim/Menus/MenuManager.h>
@@ -210,6 +211,7 @@ namespace
 		{
 		case SKSEMessagingInterface::kMessage_DataLoaded:
 			Food::FindLists();
+			Animations::Init();
 			Widget::Register();
 			Overlay::Register();
 			if (!g_equipSinkAdded) { g_equipEventSource.AddEventSink(&g_equipSink); g_equipSinkAdded = true; }

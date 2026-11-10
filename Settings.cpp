@@ -131,6 +131,17 @@ namespace
 		Add("port", "bActivityDecay", 1);			// 0 = desliga o desgaste por atividade (passos, golpes, magias, gritos)
 		Add("port", "fActivityScale", 1.0f);		// multiplicador da atividade (1 = como o original)
 
+		// Action Animations (integrado): ligar/desligar cada tipo de animacao (MCM do AA: _ActionAnimationsMCM)
+		Add("aa", "EatFoodStand", 1);	Add("aa", "EatFoodSit", 1);		Add("aa", "EatFoodMove", 1);
+		Add("aa", "DrinkStand", 1);		Add("aa", "DrinkSit", 1);		Add("aa", "DrinkMove", 1);
+		Add("aa", "bBooksAnim", 1);		Add("aa", "bNotesAnim", 1);
+		Add("aa", "bPlayEquipped", 1);	Add("aa", "bPlayGetting", 1);
+		Add("aa", "bDrinkWaterFromWaterSource", 1);	Add("aa", "bFillWaterBottle", 1);
+		Add("aa", "bMakeTowels", 1);	Add("aa", "bWashBody", 1);
+		Add("aa", "bBedrollCamping", 1);	Add("aa", "bAbsorbDragonSoul", 1);	Add("aa", "bDrinkWaterFromBarrel", 1);
+		Add("aa", "bForcedPlayingAnimations", 0);
+		Add("aa", "fBehaviorBathingArmor", 0.0f);
+
 		Add("buffs", "fHealth", 2.0f);
 		Add("buffs", "fStamina", 2.0f);
 		Add("buffs", "fMagicka", 2.0f);
@@ -303,8 +314,8 @@ namespace ESDSettings
 		FILE *f = fopen(path.c_str(), "wb");
 		if (!f) { LeaveCriticalSection(&g_cs); return false; }
 
-		const char *groups[] = { "basicNeeds", "widget", "hotkey", "messages", "buffs", "port", "expressions" };
-		const int kGroups = 7;
+		const char *groups[] = { "basicNeeds", "widget", "hotkey", "messages", "buffs", "port", "aa", "expressions" };
+		const int kGroups = 8;
 		fputs("{\n", f);
 		for (int gi = 0; gi < kGroups; gi++)
 		{
