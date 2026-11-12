@@ -305,30 +305,25 @@ namespace Needs
 			_MESSAGE("ESD: falhou ao gravar as necessidades no cosave");
 	}
 
-	void Load(const SKSESerializationInterface *intfc)
+	void LoadRecord(const SKSESerializationInterface *intfc, UInt32 type, UInt32 version, UInt32 length)
 	{
-		if (!g_init) return;
-		UInt32 type, version, length;
-		while (intfc->GetNextRecordInfo(&type, &version, &length))
+		if (!g_init || type != kRecordType || version != kRecordVersion) return;
+		float in[8];
+		memset(in, 0, sizeof(in));
+		UInt32 want = (length < sizeof(in)) ? length : (UInt32)sizeof(in);
+		if (intfc->ReadRecordData(in, want) != want)
 		{
-			if (type != kRecordType || version != kRecordVersion) continue;
-			float in[8];
-			memset(in, 0, sizeof(in));
-			UInt32 want = (length < sizeof(in)) ? length : (UInt32)sizeof(in);
-			if (intfc->ReadRecordData(in, want) != want)
-			{
-				_MESSAGE("ESD: registo de necessidades incompleto");
-				continue;
-			}
-			EnterCriticalSection(&g_lock);
-			for (int i = 0; i < 4; i++)
-			{
-				if (IsFinite(in[i])) g_val[i] = in[i];
-				g_ref[i] = IsFinite(in[4 + i]) ? in[4 + i] : g_val[i];
-			}
-			LeaveCriticalSection(&g_lock);
-			_MESSAGE("ESD: necessidades carregadas do cosave");
+			_MESSAGE("ESD: registo de necessidades incompleto");
+			return;
 		}
+		EnterCriticalSection(&g_lock);
+		for (int i = 0; i < 4; i++)
+		{
+			if (IsFinite(in[i])) g_val[i] = in[i];
+			g_ref[i] = IsFinite(in[4 + i]) ? in[4 + i] : g_val[i];
+		}
+		LeaveCriticalSection(&g_lock);
+		_MESSAGE("ESD: necessidades carregadas do cosave");
 	}
 
 	void Revert()

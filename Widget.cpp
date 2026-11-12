@@ -9,10 +9,12 @@
 #include <Skyrim/Menus/UIMessage.h>
 #include <Skyrim/Events/MenuEvent.h>
 #include <cmath>
+#include <windows.h>
 
 #include "Widget.h"
 #include "Needs.h"
 #include "Settings.h"
+#include "Overlay.h"
 
 namespace
 {
@@ -38,6 +40,8 @@ namespace
 	class IWidgetMenu;
 	IWidgetMenu	*g_menu[2] = { nullptr, nullptr };
 	bool		g_registered = false;
+	bool		g_userHidden = false;				// escondido pelo jogador (tecla)
+	DWORD		g_lastReopen = 0;
 	int			g_last[4] = { 9999, 9999, 9999, 9999 };		// ultimos valores enviados: fome, sede, sono, corpo
 
 	bool Enabled(int id)
@@ -156,7 +160,7 @@ namespace
 	{
 		MenuManager *mm = MenuManager::GetSingleton();
 		bool pauseOpen = mm && mm->numPauseGame != 0;
-		bool show = Enabled(id) && !pauseOpen;
+		bool show = Enabled(id) && !pauseOpen && !g_userHidden;
 		if (view->GetVisible() != show)
 			view->SetVisible(show);
 	}
@@ -240,6 +244,7 @@ namespace
 			}
 			else if (message->type == UIMessage::kMessage_Close)
 			{
+				_MESSAGE("ESD: o jogo fechou o widget %d", m_id);
 				if (g_menu[m_id] == this) g_menu[m_id] = nullptr;
 			}
 			return 2;
@@ -303,7 +308,7 @@ namespace
 					if (menu && (menu->flags & IMenu::kType_PauseGame) != 0)
 						view->SetVisible(false);
 				}
-				else if (mm->numPauseGame == 0 && Enabled(id))
+				else if (mm->numPauseGame == 0 && Enabled(id) && !g_userHidden)
 					view->SetVisible(true);
 			}
 			return kEvent_Continue;
@@ -324,6 +329,7 @@ namespace Widget
 		mm->Register(kCfg[1].menuName, []() -> IMenu * { return new IWidgetMenu(1); });
 		mm->GetMenuOpenCloseEventSource()->AddEventSink(&g_sink);
 		g_registered = true;
+		g_userHidden = ESDSettings::GetFloat("bWidgetUserHidden", 0.0f) != 0.0f;
 		_MESSAGE("ESD: menus dos widgets registados");
 	}
 
@@ -347,5 +353,32 @@ namespace Widget
 	void QueueUpdate()
 	{
 		if (g_menu[0] || g_menu[1]) QueueTask(false);
+	}
+
+	// Se o jogo fechar um widget ativado (por exemplo em combate ou numa cena), volta a abri-lo.
+	void Watchdog()
+	{
+		if (!g_registered) return;
+		DWORD now = GetTickCount();
+		if (g_lastReopen != 0 && now - g_lastReopen < 8000) return;
+		for (int id = 0; id < 2; id++)
+		{
+			if (!g_menu[id] && Enabled(id))
+			{
+				g_lastReopen = now;
+				_MESSAGE("ESD: widget %d estava fechado: a reabrir", id);
+				Open();
+				return;
+			}
+		}
+	}
+
+	void ToggleUserHidden()
+	{
+		g_userHidden = !g_userHidden;
+		ESDSettings::SetFloat("bWidgetUserHidden", g_userHidden ? 1.0f : 0.0f);
+		ESDSettings::Save();
+		Overlay::Push(g_userHidden ? "ESD HUD: hidden" : "ESD HUD: shown");
+		QueueTask(false);			// aplica a visibilidade ja
 	}
 }

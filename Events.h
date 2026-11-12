@@ -9,7 +9,7 @@
 namespace Events
 {
 	void DetectNewFood(TESForm *potion);		// alimento que nao esta em nenhuma lista: pergunta ao jogador o que e
-	void KnittingNeedle();						// agulha de tricô equipada
-	void OnItemDropped(UInt32 itemFormId);		// o jogador largou um item no chao: se for a cama portatil ou o barril, troca-o pelo objeto ativavel
-	void ConvertDropped(int pairIndex);			// (interno) corre depois de um pequeno atraso						// agulha de trico equipada: faz uma toalha com algodao da tundra
+	void KnittingNeedle();						// agulha de trico equipada: faz uma toalha com algodao da tundra
+	void OnItemDropped(UInt32 itemFormId);		// o jogador largou um item no chao: cama portatil ou barril passam a objeto ativavel
+	void ConvertDropped(int pairIndex);			// (interno) corre depois de um pequeno atraso
 }

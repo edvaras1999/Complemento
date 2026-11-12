@@ -50,9 +50,13 @@ Os estados das necessidades já existem no jogo como feitiços (adicionados e re
 - Corpo: `_ESDBodyAbilitySpell` (sujo); limpo: `_ESDCleanBodySpell`. Níveis de sujidade: `0x82D`, `0x825`, `0x82B`.
 Condição tipo: "HasSpell / HasMagicEffect do jogador" com o feitiço do estado que queres.
 
+## 6a. Correções desta versão
+- Widget: vigia que reabre; tecla mantida (Y) para esconder e mostrar.
+- Cama portátil e barril de hidromel: troca do item largado pelo objeto ativável; evento de animação do AA ligado.
+
 ## 6. Revisão do que falta no ESD (por ordem de valor)
 1. Testar o que já está escrito mas nunca correu: cama e funções nativas, atividade (já confirmada pelo log), alimento novo, agulha de tricô, expressões, atalho de refeições, sujidade e sons, animações.
-2. Efeitos dos buffs e debuffs na DLL (retirar os 4 scripts de efeitos): precisa de alterar o .esp e de guardar no save o que a DLL aplicou. Só com teste cuidadoso.
+2. (feito, por testar) Efeitos dos buffs na DLL; .esp sem os 4 scripts de efeito em `ESP_scriptfree\\`.
 3. Garrafas vazias ao beber: já há os códigos das bebidas (ficheiros AlchemyItems do AA), falta ler no original a regra por tipo de garrafa.
 4. Atalho "conveniente" (beber de um rio, recolher a cama portátil): a água não é detetável nesta LE; a cama portátil precisa do alvo da mira.
 5. Alma de dragão (evento para o script do ESD e animação do AA).

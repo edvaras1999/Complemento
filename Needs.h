@@ -41,6 +41,6 @@ namespace Needs
 	void SleepMenuClosed();									// ao fechar o menu Dormir/Esperar: repoe o sono
 
 	void Save(const SKSESerializationInterface *intfc);
-	void Load(const SKSESerializationInterface *intfc);
+	void LoadRecord(const SKSESerializationInterface *intfc, UInt32 type, UInt32 version, UInt32 length);
 	void Revert();
 }

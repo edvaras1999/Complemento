@@ -236,6 +236,11 @@ namespace Animations
 
 	bool PlayType(int type)
 	{
+		return PlayTypeNamed(type, NULL);
+	}
+
+	bool PlayTypeNamed(int type, const char *requested)
+	{
 		if (!g_ready || !CanPlay()) return false;
 		const char *category = NULL, *key = NULL, *name = "random";
 		switch (type)
@@ -250,6 +255,7 @@ namespace Animations
 		default: return false;
 		}
 		if (ESDSettings::GetFloat(key, 1.0f) == 0.0f) return false;
+		if (requested && *requested) name = requested;
 		return Play(Pick(category, name));
 	}
 }

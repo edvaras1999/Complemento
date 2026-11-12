@@ -17,6 +17,10 @@
 #include "Expression.h"
 #include "Hotkeys.h"
 #include "Animations.h"
+#include "Events.h"
+#include "Effects.h"
+#include <string>
+#include <cstring>
 #include <Skyrim/Events/ScriptEvent.h>
 #include <Skyrim/Events/MenuEvent.h>
 #include <Skyrim/Menus/MenuManager.h>
@@ -34,7 +38,7 @@ namespace
 	class UpdateTask : public TaskDelegate
 	{
 	public:
-		virtual void Run() override { Needs::Update(); }
+		virtual void Run() override { Needs::Update(); Widget::Watchdog(); }
 		virtual void Dispose() override {}
 	};
 
@@ -195,11 +199,63 @@ namespace
 	const SKSEMessagingInterface	*g_messaging = nullptr;
 
 	//-------------------------------------------------------
+	// itens largados (cama portatil, barril) e pedidos de animacao enviados pelos scripts do ESD
+	//-------------------------------------------------------
+	class ContainerSink : public BSTEventSink<TESContainerChangedEvent>
+	{
+	public:
+		EventResult ReceiveEvent(TESContainerChangedEvent *evn, BSTEventSource<TESContainerChangedEvent> *src) override
+		{
+			if (evn && evn->from == 0x14 && evn->to == 0)		// do jogador para o mundo
+				Events::OnItemDropped(evn->item);
+			return kEvent_Continue;
+		}
+	};
+
+	class ModAnimTask : public TaskDelegate
+	{
+		std::string	m_name;
+		float		m_num;
+	public:
+		ModAnimTask(const char *name, float num) : m_name(name ? name : ""), m_num(num) {}
+		virtual void Run() override { Animations::PlayTypeNamed((int)(m_num + 0.5f), m_name.c_str()); }
+		virtual void Dispose() override { delete this; }
+	};
+
+	class ModEventSink : public BSTEventSink<SKSEModCallbackEvent>
+	{
+	public:
+		EventResult ReceiveEvent(SKSEModCallbackEvent *evn, BSTEventSource<SKSEModCallbackEvent> *src) override
+		{
+			if (evn && evn->eventName.c_str() && !strcmp(evn->eventName.c_str(), "OnESDAnimationEvent"))
+			{
+				const SKSEPlugin *plugin = SKSEPlugin::GetSingleton();
+				const SKSETaskInterface *task = plugin ? plugin->GetInterface<SKSETaskInterface>() : NULL;
+				if (task)
+					task->AddTask(new ModAnimTask(evn->strArg.c_str(), evn->numArg));
+			}
+			return kEvent_Continue;
+		}
+	};
+
+	ContainerSink	g_containerSink;
+	ModEventSink	g_modSink;
+	bool			g_extraSinksAdded = false;
+
+	//-------------------------------------------------------
 	// cosave
 	//-------------------------------------------------------
-	void CosaveSave(SKSESerializationInterface *intfc)	{ Needs::Save(intfc); }
-	void CosaveLoad(SKSESerializationInterface *intfc)	{ Needs::Load(intfc); }
-	void CosaveRevert(SKSESerializationInterface *)		{ Needs::Revert(); }
+	void CosaveSave(SKSESerializationInterface *intfc)	{ Needs::Save(intfc); Effects::Save(intfc); }
+	void CosaveLoad(SKSESerializationInterface *intfc)
+	{
+		UInt32 type, version, length;
+		while (intfc->GetNextRecordInfo(&type, &version, &length))
+		{
+			if (type == Effects::kRecordType) Effects::LoadRecord(intfc, version, length);
+			else Needs::LoadRecord(intfc, type, version, length);
+		}
+	}
+	void CosaveRevert(SKSESerializationInterface *)		{ Needs::Revert(); Effects::Revert(); }
 
 	//-------------------------------------------------------
 	// mensagens do SKSE
@@ -216,6 +272,14 @@ namespace
 			Overlay::Register();
 			if (!g_equipSinkAdded) { g_equipEventSource.AddEventSink(&g_equipSink); g_equipSinkAdded = true; }
 			AddSleepSinks();
+			if (!g_extraSinksAdded && g_messaging)
+			{
+				g_containerChangedEventSource.AddEventSink(&g_containerSink);
+				BSTEventSource<SKSEModCallbackEvent> *mods = (BSTEventSource<SKSEModCallbackEvent> *)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_ModEvent);
+				if (mods) mods->AddEventSink(&g_modSink);
+				g_extraSinksAdded = true;
+				_MESSAGE("ESD: eventos de contentores e de mod ligados");
+			}
 			if (!g_actionSinkAdded && g_messaging)
 			{
 				BSTEventSource<SKSEActionEvent> *src = (BSTEventSource<SKSEActionEvent> *)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_ActionEvent);

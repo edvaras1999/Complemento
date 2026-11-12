@@ -7,5 +7,7 @@ namespace Widget
 	void Register();			// regista o menu no jogo (chamar apos o carregamento dos dados)
 	void Open();				// abre o widget se estiver ativado nas definicoes
 	void QueueConfigure();		// reaplica posicao, escala, transparencia e visibilidade (por exemplo apos mudar o MCM)
-	void QueueUpdate();			// atualiza os valores mostrados (fome, sede, sono)
+	void QueueUpdate();
+	void Watchdog();			// reabre um widget ativado que o jogo tenha fechado (chamar a cada poucos segundos)
+	void ToggleUserHidden();	// esconde/mostra os widgets a pedido do jogador (tecla mantida)			// atualiza os valores mostrados (fome, sede, sono)
 }

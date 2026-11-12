@@ -15,6 +15,7 @@
 #include "Food.h"
 #include "Settings.h"
 #include "Messages.h"
+#include "Widget.h"
 
 namespace
 {
@@ -115,26 +116,63 @@ namespace
 	};
 	MealsTask g_mealsTask;
 
+	class ToggleTask : public TaskDelegate
+	{
+	public:
+		virtual void Run() override
+		{
+			MenuManager *mm = MenuManager::GetSingleton();
+			if (mm && mm->numPauseGame != 0) return;		// nao reage em menus nem na consola
+			Widget::ToggleUserHidden();
+		}
+		virtual void Dispose() override {}
+	};
+	ToggleTask g_toggleTask;
+
 	DWORD WINAPI Watch(LPVOID)
 	{
 		bool mealsDown = false;
 		int tick = 0;
-		UINT mealsVk = 0;
+		UINT mealsVk = 0, toggleVk = 0;
+		DWORD holdMs = 600, toggleSince = 0;
+		bool toggleFired = false;
 		for (;;)
 		{
 			Sleep(30);
-			if ((tick++ % 20) == 0)			// reler a tecla escolhida de vez em quando (o MCM pode mudar)
-				mealsVk = VirtualKey((int)ESDSettings::GetFloat("iMealsHotkey", 0.0f));
-			if (!mealsVk || !GameHasFocus()) { mealsDown = false; continue; }
-
-			bool down = (GetAsyncKeyState((int)mealsVk) & 0x8000) != 0;
-			if (down && !mealsDown)
+			if ((tick++ % 20) == 0)			// reler as teclas escolhidas de vez em quando (o MCM e o Settings.json podem mudar)
 			{
-				const SKSEPlugin *plugin = SKSEPlugin::GetSingleton();
-				const SKSETaskInterface *task = plugin ? plugin->GetInterface<SKSETaskInterface>() : nullptr;
-				if (task) task->AddTask(&g_mealsTask);
+				mealsVk = VirtualKey((int)ESDSettings::GetFloat("iMealsHotkey", 0.0f));
+				toggleVk = VirtualKey((int)ESDSettings::GetFloat("iWidgetToggleKey", 21.0f));
+				float s = ESDSettings::GetFloat("fWidgetToggleSeconds", 0.6f);
+				holdMs = (DWORD)((s < 0.2f ? 0.2f : s) * 1000.0f);
 			}
-			mealsDown = down;
+			if (!GameHasFocus()) { mealsDown = false; toggleSince = 0; toggleFired = false; continue; }
+
+			const SKSEPlugin *plugin = SKSEPlugin::GetSingleton();
+			const SKSETaskInterface *task = plugin ? plugin->GetInterface<SKSETaskInterface>() : nullptr;
+
+			if (mealsVk)
+			{
+				bool down = (GetAsyncKeyState((int)mealsVk) & 0x8000) != 0;
+				if (down && !mealsDown && task) task->AddTask(&g_mealsTask);
+				mealsDown = down;
+			}
+
+			if (toggleVk)
+			{
+				bool down = (GetAsyncKeyState((int)toggleVk) & 0x8000) != 0;
+				if (down)
+				{
+					DWORD now = GetTickCount();
+					if (!toggleSince) toggleSince = now;
+					else if (!toggleFired && now - toggleSince >= holdMs)
+					{
+						toggleFired = true;
+						if (task) task->AddTask(&g_toggleTask);
+					}
+				}
+				else { toggleSince = 0; toggleFired = false; }
+			}
 		}
 		return 0;
 	}

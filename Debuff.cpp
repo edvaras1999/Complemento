@@ -17,6 +17,7 @@
 #include "Messages.h"
 #include "Widget.h"
 #include "Expression.h"
+#include "Effects.h"
 
 namespace
 {
@@ -92,16 +93,18 @@ namespace
 
 	// Estado "bom" (>= limiar) -> buff; estado "mau" (< limiar) -> debuff + mensagem uma vez.
 	void ApplyState(Actor *actor, float value, float threshold, UInt32 buffSpell, UInt32 debuffSpell,
-					UInt32 msgFlag, const char *msgKey)
+					UInt32 msgFlag, const char *msgKey, int effectKind)
 	{
 		if (value >= threshold)
 		{
+			Effects::Sync((Effects::Kind)effectKind, true);
 			RemoveSpellFrom(actor, debuffSpell);
 			AddSpellTo(actor, buffSpell);
 			ClearFlag(msgFlag);
 		}
 		else
 		{
+			Effects::Sync((Effects::Kind)effectKind, false);
 			RemoveSpellFrom(actor, buffSpell);
 			AddSpellTo(actor, debuffSpell);
 			if (!HasFlag(msgFlag))
@@ -194,7 +197,13 @@ namespace Debuff
 
 		// fome: limiar 1440
 		if (s.hungry && (mask & Needs::kHungry) && ESDSettings::GetFloat("bIsEnableHungryBuff", 0.0f) != 0.0f)
-			ApplyState(actor, Needs::Get(Needs::kHungry), 1440.0f, kStuffedSpell, kHungryAbility, kMsgHungry, "sGetHungry");
+			ApplyState(actor, Needs::Get(Needs::kHungry), 1440.0f, kStuffedSpell, kHungryAbility, kMsgHungry, "sGetHungry", Effects::kStuffed);
+
+		// necessidade ou buff desativado no MCM: nao deixa o efeito aplicado
+		if (mask & Needs::kHungry)  { if (!(s.hungry && ESDSettings::GetFloat("bIsEnableHungryBuff", 0.0f) != 0.0f)) Effects::Sync(Effects::kStuffed, false); }
+		if (mask & Needs::kThirsty) { if (!(s.thirsty && ESDSettings::GetFloat("bIsEnableThirstyBuff", 0.0f) != 0.0f)) Effects::Sync(Effects::kQuenched, false); }
+		if (mask & Needs::kSleepy)  { if (!(s.sleepiness && ESDSettings::GetFloat("bIsEnableSleepinessBuff", 0.0f) != 0.0f)) Effects::Sync(Effects::kNotWeary, false); }
+		if (mask & Needs::kBody)    { if (!(s.bodyHealth && ESDSettings::GetFloat("bIsEnableBodyHealthBuff", 0.0f) != 0.0f)) Effects::Sync(Effects::kClean, false); }
 
 		// som de fome (estomago a roncar), a cada 90 s enquanto tiver fome
 		if (s.hungry && (mask & Needs::kHungry) && ESDSettings::GetFloat("bIsEnableHungryGrowl", 0.0f) != 0.0f
@@ -203,11 +212,11 @@ namespace Debuff
 
 		// sede: limiar 1440
 		if (s.thirsty && (mask & Needs::kThirsty) && ESDSettings::GetFloat("bIsEnableThirstyBuff", 0.0f) != 0.0f)
-			ApplyState(actor, Needs::Get(Needs::kThirsty), 1440.0f, kQuenchedSpell, kThirstyAbility, kMsgThirsty, "sGetThirsy");
+			ApplyState(actor, Needs::Get(Needs::kThirsty), 1440.0f, kQuenchedSpell, kThirstyAbility, kMsgThirsty, "sGetThirsy", Effects::kQuenched);
 
 		// sono: limiar 720 (valor baixo = cansado)
 		if (s.sleepiness && (mask & Needs::kSleepy) && ESDSettings::GetFloat("bIsEnableSleepinessBuff", 0.0f) != 0.0f)
-			ApplyState(actor, Needs::Get(Needs::kSleepy), 720.0f, kNotWearySpell, kSleepyAbility, kMsgTired, "sGetTired");
+			ApplyState(actor, Needs::Get(Needs::kSleepy), 720.0f, kNotWearySpell, kSleepyAbility, kMsgTired, "sGetTired", Effects::kNotWeary);
 
 		// bocejo quando esta cansado (sono abaixo de 720)
 		if (s.sleepiness && (mask & Needs::kSleepy) && Needs::Get(Needs::kSleepy) < 720.0f)
@@ -237,6 +246,7 @@ namespace Debuff
 
 			if (v >= limit)
 			{
+				Effects::Sync(Effects::kClean, false);
 				RemoveSpellFrom(actor, kCleanBodySpell);
 				AddSpellTo(actor, kBodyAbility);
 				if (!HasFlag(kMsgDirty)) { Messages::Show("sGetDirtyBody"); AddFlag(kMsgDirty); Expression::Trigger(1); }
@@ -251,6 +261,7 @@ namespace Debuff
 					ClearFlag(kMsgBathSoon);
 				RemoveSpellFrom(actor, kBodyAbility);
 				AddSpellTo(actor, kCleanBodySpell);
+				Effects::Sync(Effects::kClean, true);
 				ClearFlag(kMsgDirty);
 			}
 		}

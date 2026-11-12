@@ -18,6 +18,25 @@ Uso pessoal (o autor está incontactável).
   O `ESDPlugin.log` diz "listas de alimentos encontradas" ou "nao encontradas".
 - Ainda sem: bónus de alimentos, mensagens, itens especiais (HearthFires), garrafas vazias.
 
+## Efeitos dos buffs na DLL, sem scripts (novo)
+- Os 4 scripts de efeito (`_ESDHungryEffectScript`, `_ESDThirsyEffectScript`, `_ESDSleepinessEffectScript`, `_ESDBodyEffectScript`) passam para a DLL.
+  Quando entras em "bem alimentado", "sem sede", "descansado" ou "corpo limpo", a DLL soma os mesmos valores que os scripts somavam
+  (vida e vigor `base/2 x fHealth/fStamina`; magia `base/2 x fMagicka` e recuperação de gritos; velocidade de armas e de movimento; resistência a doenças e venenos)
+  e desfaz exatamente o que somou quando sais do estado. O que foi somado fica guardado no save (registo `ESDE`).
+- Precisa do `.esp` sem scripts de efeito (`ESP_scriptfree\EatingSleepingDrinking.esp`): só os 4 efeitos de buff perdem o script;
+  os de eventos, do MCM e do barril ficam.
+- IMPORTANTE para saves antigos: se o save já tinha buffs aplicados pelos scripts, trocar de .esp deixa esses valores para sempre. Faz assim:
+  desativa as 4 necessidades no MCM (os scripts desfazem tudo), grava, só depois instala o .esp novo e a DLL, e volta a ativar. Num jogo novo não há problema.
+
+## Widgets, cama portátil e barril (correções)
+- Os widgets já não ficam perdidos: se o jogo fechar um widget ativado (por exemplo em combate), uma vigia reabre-o em poucos segundos
+  e o log diz "o jogo fechou o widget" e "a reabrir". Os widgets são nativos (Scaleform) e não usam Papyrus; o MCM só os toca quando mudas uma definição.
+- Esconder e mostrar os widgets: mantém premida a tecla do `Settings.json` (`iWidgetToggleKey`, 21 = Y) durante `fWidgetToggleSeconds` (0,6 s).
+  O estado fica guardado em `bWidgetUserHidden`. Não reage com menus ou a consola abertos.
+- Cama portátil e barril de hidromel: ao largares no chão o item (`_ESDBedrollMISC`, `_ESDMeadBarrelMisc`), a DLL troca-o pelo objeto ativável
+  (`_ESDBedrollPotableACTI`, `_ESDMeadBarrelMoveACTI`), como o original. O script do ESD pergunta depois se montas ou recolhes.
+- O pedido de animação que esses scripts enviam (`OnESDAnimationEvent`: MakeBedroll, PickupBedroll, Tankard) é recebido pela DLL e toca a animação do AA.
+
 ## Action Animations integrado (novo)
 - O Action Animations passa a viver dentro desta DLL (chamadas diretas em vez de mensagens entre DLLs). Lê as listas XML de `Data\SKSE\Plugins\ActionAnimations\`
   (as animações, e `AlchemyItems\*.xml` com os itens do Skyrim) e toca o evento de animação no jogador. Precisa dos ficheiros do AA instalados (esp, behaviors convertidos, XML).

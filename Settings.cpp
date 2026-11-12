@@ -130,6 +130,9 @@ namespace
 		Add("port", "fMessageOffsetY", 0.0f);		// desloca as mensagens na vertical (area de 1280x720; positivo = para baixo)
 		Add("port", "bActivityDecay", 1);			// 0 = desliga o desgaste por atividade (passos, golpes, magias, gritos)
 		Add("port", "fActivityScale", 1.0f);		// multiplicador da atividade (1 = como o original)
+		Add("port", "iWidgetToggleKey", 21);		// tecla (codigo DirectInput) que esconde/mostra os widgets quando mantida premida; 21 = Y, 0 = desligado
+		Add("port", "fWidgetToggleSeconds", 0.6f);	// segundos a manter a tecla premida
+		Add("port", "bWidgetUserHidden", 0);		// estado atual: 1 = widgets escondidos pelo jogador
 
 		// Action Animations (integrado): ligar/desligar cada tipo de animacao (MCM do AA: _ActionAnimationsMCM)
 		Add("aa", "EatFoodStand", 1);	Add("aa", "EatFoodSit", 1);		Add("aa", "EatFoodMove", 1);

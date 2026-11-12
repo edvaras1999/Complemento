@@ -99,6 +99,7 @@
     <ClCompile Include="Activity.cpp" />
     <ClCompile Include="Animations.cpp" />
     <ClCompile Include="Debuff.cpp" />
+    <ClCompile Include="Effects.cpp" />
     <ClCompile Include="Events.cpp" />
     <ClCompile Include="Expression.cpp" />
     <ClCompile Include="Hotkeys.cpp" />
@@ -123,6 +124,7 @@
     <ClInclude Include="Activity.h" />
     <ClInclude Include="Animations.h" />
     <ClInclude Include="Debuff.h" />
+    <ClInclude Include="Effects.h" />
     <ClInclude Include="Events.h" />
     <ClInclude Include="Expression.h" />
     <ClInclude Include="Hotkeys.h" />
