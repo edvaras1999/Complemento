@@ -73,6 +73,7 @@ namespace
 	bool ModAV(VMState *state, Actor *a, const char *name, float amount)
 	{
 		if (amount == 0.0f) return true;
+		_MESSAGE("ESD: [efeito] ModActorValue(%s, %+.2f)", name, amount);
 		ModAVNative *fn = (ModAVNative *)SKSEScript::GetFunction(state, Actor::kTypeID, "ModActorValue");
 		if (!fn || !fn->Validate(state)) { _MESSAGE("ESD: nao encontrei Actor.ModActorValue; os efeitos dos buffs ficam desligados"); g_failed = true; return false; }
 		(*fn)(state, 0, a, BSFixedString(name), amount);
@@ -81,6 +82,7 @@ namespace
 
 	float GetAV(VMState *state, Actor *a, const char *name, bool base)
 	{
+		_MESSAGE("ESD: [efeito] a ler %s (%s)", name, base ? "base" : "atual");
 		GetAVNative *fn = (GetAVNative *)SKSEScript::GetFunction(state, Actor::kTypeID, base ? "GetBaseActorValue" : "GetActorValue");
 		if (!fn || !fn->Validate(state)) return 0.0f;
 		return (*fn)(state, 0, a, BSFixedString(name));
@@ -132,6 +134,7 @@ namespace Effects
 		if (!EffectsAllowed()) return;
 		Applied &st = g_state[kind];
 		if (st.active == shouldBeActive) return;
+		_MESSAGE("ESD: [efeito %d] a %s", (int)kind, shouldBeActive ? "aplicar" : "desfazer");
 
 		VMState *state = g_skyrimVM->GetState();
 		if (!state) return;

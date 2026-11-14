@@ -77,7 +77,10 @@ namespace Events
 		if (!itemFormId) return;
 		for (int i = 0; i < 2; i++)
 			if (itemFormId == Food::FormId(kPairs[i].miscLocal))
+			{
+				_MESSAGE("ESD: [largar] %s largada (%08X): a trocar dentro de 0,5 s", kPairs[i].name, itemFormId);
 				CreateThread(NULL, 0, &DelayThread, (LPVOID)(INT_PTR)(i + 1), 0, NULL);
+			}
 	}
 
 	void ConvertDropped(int index)
@@ -87,6 +90,7 @@ namespace Events
 		UInt32 miscId = Food::FormId(pr.miscLocal), actiId = Food::FormId(pr.actiLocal);
 		TESForm *acti = actiId ? LookupFormByID(actiId) : NULL;
 		TESObjectCELL *cell = g_thePlayer->GetParentCell();
+		_MESSAGE("ESD: [largar] item=%08X objeto ativavel=%08X (%p) celula=%p", miscId, actiId, acti, cell);
 		if (!miscId || !acti || !cell) return;
 
 		// procura, na celula do jogador, o item largado mais proximo
@@ -102,7 +106,7 @@ namespace Events
 		}
 		if (!best)
 		{
-			_MESSAGE("ESD: item largado (%s) nao encontrado na celula", pr.name);
+			_MESSAGE("ESD: item largado (%s) nao encontrado na celula (%u referencias vistas)", pr.name, (unsigned)cell->objectList.size());
 			return;
 		}
 

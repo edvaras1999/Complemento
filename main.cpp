@@ -207,7 +207,11 @@ namespace
 		EventResult ReceiveEvent(TESContainerChangedEvent *evn, BSTEventSource<TESContainerChangedEvent> *src) override
 		{
 			if (evn && evn->from == 0x14 && evn->to == 0)		// do jogador para o mundo
+			{
+				static int logged = 0;
+				if (logged < 25) { logged++; _MESSAGE("ESD: [largar] evento: item %08X x%u", evn->item, (unsigned)evn->count); }
 				Events::OnItemDropped(evn->item);
+			}
 			return kEvent_Continue;
 		}
 	};
