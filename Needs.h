@@ -34,7 +34,8 @@ namespace Needs
 	void SetActivity(int slot, float value);				// atribui em vez de somar (como o original em alguns eventos)
 
 	void SetReady(bool ready);
-	bool IsReady();											// ha um jogo carregado e a correr								// jogo carregado: o relogio pode correr
+	bool IsReady();
+	bool IsSettled();										// jogo a correr ha uns segundos e sem menus que pausem (seguro mexer no jogador)											// ha um jogo carregado e a correr								// jogo carregado: o relogio pode correr
 	void ResyncClock();										// volta a ler o relogio do jogo (sem aplicar o intervalo perdido)
 	void Update();											// passagem do tempo (corre na thread principal)
 

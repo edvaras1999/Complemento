@@ -11,6 +11,7 @@
 #include "Needs.h"
 #include "Settings.h"
 #include "Debuff.h"
+#include <Skyrim/Menus/MenuManager.h>
 
 namespace
 {
@@ -26,6 +27,7 @@ namespace
 	float	g_act[7];						// contadores de atividade  (original: +0x150..+0x168)
 	float	g_lastMinutes = 0.0f;			// ultimo instante processado (minutos de jogo)
 	bool	g_ready = false;
+	DWORD	g_readySince = 0;
 	float	g_sleepDays = 0.0f;				// duracao do sono/espera em dias de jogo (original: +0x18C)
 
 	bool IsFinite(float f)
@@ -195,11 +197,23 @@ namespace Needs
 	void SetReady(bool ready)
 	{
 		g_ready = ready;
+		g_readySince = ready ? GetTickCount() : 0;
 	}
 
 	bool IsReady()
 	{
 		return g_ready;
+	}
+
+	// So se mexe no jogador (feiticos, valores) depois de o jogo estar mesmo a correr: passados 10 s e sem menus que pausem
+	// (a criacao de personagem e o carregamento contam como menus). Antes disso o jogador pode ainda nao estar pronto.
+	bool IsSettled()
+	{
+		if (!g_ready || g_readySince == 0) return false;
+		if (GetTickCount() - g_readySince < 10000) return false;
+		MenuManager *mm = MenuManager::GetSingleton();
+		if (mm && mm->numPauseGame != 0) return false;
+		return true;
 	}
 
 	void ResyncClock()

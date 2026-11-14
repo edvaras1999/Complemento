@@ -6,9 +6,12 @@
 #include <Skyrim/Forms/PlayerCharacter.h>
 #include <cstring>
 #include <cmath>
+#include <string>
 
 #include "Effects.h"
 #include "Settings.h"
+#include "Needs.h"
+#include <cstdio>
 
 namespace
 {
@@ -25,6 +28,35 @@ namespace
 
 	Applied	g_state[4];
 	bool	g_failed = false;
+	int		g_allowed = -1;			// -1 ainda nao decidido, 0 nao, 1 sim
+
+	// Os efeitos so passam para a DLL se o .esp ja NAO tiver os 4 scripts de efeito (senao somavam-se duas vezes).
+	// iEffectsInDLL: 0 = nunca, 1 = sempre, 2 = automatico (le o .esp e procura os nomes dos scripts).
+	bool EffectsAllowed()
+	{
+		if (g_allowed >= 0) return g_allowed == 1;
+		int mode = (int)ESDSettings::GetFloat("iEffectsInDLL", 2.0f);
+		if (mode == 0) g_allowed = 0;
+		else if (mode == 1) g_allowed = 1;
+		else
+		{
+			g_allowed = 0;
+			FILE *f = fopen("Data\\EatingSleepingDrinking.esp", "rb");
+			if (f)
+			{
+				std::string data;
+				char buf[4096];
+				size_t k;
+				while ((k = fread(buf, 1, sizeof(buf), f)) > 0) data.append(buf, k);
+				fclose(f);
+				bool hasScripts = data.find("_ESDHungryEffectScript") != std::string::npos || data.find("_ESDThirsyEffectScript") != std::string::npos
+					|| data.find("_ESDSleepinessEffectScript") != std::string::npos || data.find("_ESDBodyEffectScript") != std::string::npos;
+				g_allowed = hasScripts ? 0 : 1;
+			}
+		}
+		_MESSAGE("ESD: efeitos dos buffs na DLL: %s", g_allowed == 1 ? "ligados (o .esp nao tem os scripts de efeito)" : "desligados (o .esp ainda tem os scripts, ou iEffectsInDLL=0)");
+		return g_allowed == 1;
+	}
 
 	const char *AVName(int kind, int slot)
 	{
@@ -96,7 +128,8 @@ namespace Effects
 
 	void Sync(Kind kind, bool shouldBeActive)
 	{
-		if (g_failed || !g_skyrimVM || !g_thePlayer) return;
+		if (g_failed || !g_skyrimVM || !g_thePlayer || !Needs::IsSettled()) return;
+		if (!EffectsAllowed()) return;
 		Applied &st = g_state[kind];
 		if (st.active == shouldBeActive) return;
 

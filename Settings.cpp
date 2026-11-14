@@ -132,6 +132,7 @@ namespace
 		Add("port", "fActivityScale", 1.0f);		// multiplicador da atividade (1 = como o original)
 		Add("port", "iWidgetToggleKey", 21);		// tecla (codigo DirectInput) que esconde/mostra os widgets quando mantida premida; 21 = Y, 0 = desligado
 		Add("port", "fWidgetToggleSeconds", 0.6f);	// segundos a manter a tecla premida
+		Add("port", "iEffectsInDLL", 2);				// efeitos dos buffs na DLL: 0 = nunca, 1 = sempre, 2 = so se o .esp nao tiver os scripts de efeito
 		Add("port", "bWidgetUserHidden", 0);		// estado atual: 1 = widgets escondidos pelo jogador
 
 		// Action Animations (integrado): ligar/desligar cada tipo de animacao (MCM do AA: _ActionAnimationsMCM)
