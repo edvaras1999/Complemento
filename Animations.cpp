@@ -3,6 +3,8 @@
 #include <Skyrim/Forms/TESForm.h>
 #include <Skyrim/Forms/Actor.h>
 #include <Skyrim/Forms/PlayerCharacter.h>
+#include <SKSE/PapyrusInvoke.h>
+#include <Skyrim/SkyrimVM.h>
 #include <Skyrim/FileIO/TESFile.h>
 #include <Skyrim/FileIO/TESDataHandler.h>
 #include <windows.h>
@@ -171,6 +173,70 @@ namespace
 		return hits[rand() % hits.size()];
 	}
 
+
+	//-----------------------------------------------------------
+	// Armadura ao lavar o corpo (fBehaviorBathingArmor: 0 nada, 1 so tirar, 2 tirar e repor)
+	//-----------------------------------------------------------
+	typedef _NativeFunction<Actor, TESForm *, SInt32>					GetWornFormNative;
+	typedef _NativeFunction<Actor, void, TESForm *, bool, bool>			EquipNative;
+
+	std::vector<UInt32>	g_removed;			// armaduras retiradas, a repor
+	DWORD				g_reequipAt = 0;
+
+	void UnequipSlots(float animSeconds)
+	{
+		int mode = (int)ESDSettings::GetFloat("fBehaviorBathingArmor", 0.0f);
+		if (mode < 1 || g_reequipAt != 0 || !g_skyrimVM || !g_thePlayer) return;
+		VMState *state = g_skyrimVM->GetState();
+		if (!state) return;
+		GetWornFormNative *worn = (GetWornFormNative *)SKSEScript::GetFunction(state, Actor::kTypeID, "GetWornForm");
+		EquipNative *unequip = (EquipNative *)SKSEScript::GetFunction(state, Actor::kTypeID, "UnequipItem");
+		if (!worn || !worn->Validate(state) || !unequip || !unequip->Validate(state))
+		{
+			_MESSAGE("ESD/AA: nao encontrei GetWornForm/UnequipItem; a armadura nao sera retirada");
+			return;
+		}
+		Actor *player = static_cast<Actor *>(g_thePlayer);
+		g_removed.clear();
+		for (int slot = 30; slot <= 59; slot++)
+		{
+			if (slot == 50 || slot == 51) continue;
+			char key[16];
+			sprintf(key, "SlotMask%d", slot);
+			if (ESDSettings::GetFloat(key, 0.0f) == 0.0f) continue;
+			TESForm *f = (*worn)(state, 0, player, (SInt32)(1 << (slot - 30)));
+			if (!f) continue;
+			bool seen = false;
+			for (size_t i = 0; i < g_removed.size(); i++) if (g_removed[i] == f->formID) seen = true;
+			if (seen) continue;
+			(*unequip)(state, 0, player, f, false, true);
+			g_removed.push_back(f->formID);
+		}
+		_MESSAGE("ESD/AA: %u pecas de armadura retiradas para lavar (modo %d)", (unsigned)g_removed.size(), mode);
+		if (mode >= 2 && !g_removed.empty())
+			g_reequipAt = GetTickCount() + (DWORD)(animSeconds * 1000.0f) + 500;
+		else
+			g_removed.clear();
+	}
+
+	void ReequipAll()
+	{
+		g_reequipAt = 0;
+		if (g_removed.empty() || !g_skyrimVM || !g_thePlayer) { g_removed.clear(); return; }
+		VMState *state = g_skyrimVM->GetState();
+		EquipNative *equip = state ? (EquipNative *)SKSEScript::GetFunction(state, Actor::kTypeID, "EquipItem") : NULL;
+		if (equip && equip->Validate(state))
+		{
+			for (size_t i = 0; i < g_removed.size(); i++)
+			{
+				TESForm *f = LookupFormByID(g_removed[i]);
+				if (f) (*equip)(state, 0, static_cast<Actor *>(g_thePlayer), f, false, true);
+			}
+			_MESSAGE("ESD/AA: %u pecas de armadura repostas", (unsigned)g_removed.size());
+		}
+		g_removed.clear();
+	}
+
 	bool Play(const Anim *a)
 	{
 		if (!a || !g_thePlayer) return false;
@@ -256,6 +322,15 @@ namespace Animations
 		}
 		if (ESDSettings::GetFloat(key, 1.0f) == 0.0f) return false;
 		if (requested && *requested) name = requested;
-		return Play(Pick(category, name));
+		const Anim *a = Pick(category, name);
+		if (a && type == 8 && GetTickCount() >= g_busyUntil)
+			UnequipSlots(a->duration);			// tira a armadura escolhida antes de comecar a animacao
+		return Play(a);
+	}
+
+	void Tick()
+	{
+		if (g_reequipAt != 0 && (int)(GetTickCount() - g_reequipAt) >= 0)
+			ReequipAll();
 	}
 }

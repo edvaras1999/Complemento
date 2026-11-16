@@ -145,6 +145,14 @@ namespace
 		Add("aa", "bBedrollCamping", 1);	Add("aa", "bAbsorbDragonSoul", 1);	Add("aa", "bDrinkWaterFromBarrel", 1);
 		Add("aa", "bForcedPlayingAnimations", 0);
 		Add("aa", "fBehaviorBathingArmor", 0.0f);
+		// ranhuras de armadura que saem ao lavar o corpo (so se fBehaviorBathingArmor for 1 ou 2): 1 = sai
+		for (int slot = 30; slot <= 59; slot++)
+		{
+			if (slot == 50 || slot == 51) continue;
+			char k[16]; sprintf(k, "SlotMask%d", slot);
+			bool on = (slot == 30 || slot == 32 || slot == 33 || slot == 34 || slot == 37 || slot == 38 || slot == 39 || slot == 41 || slot == 42 || slot == 46);
+			Add("aa", k, on ? 1.0f : 0.0f);
+		}
 
 		Add("buffs", "fHealth", 2.0f);
 		Add("buffs", "fStamina", 2.0f);
