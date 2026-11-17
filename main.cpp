@@ -47,7 +47,7 @@ namespace
 	class SampleTask : public TaskDelegate
 	{
 	public:
-		virtual void Run() override { Activity::Sample(); Expression::Tick(); }
+		virtual void Run() override { Activity::Sample(); Expression::Tick(); Animations::Tick(); }
 		virtual void Dispose() override {}
 	};
 
