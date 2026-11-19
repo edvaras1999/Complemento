@@ -13,6 +13,7 @@
 
 #include "Widget.h"
 #include "Needs.h"
+#include "Perf.h"
 #include "Settings.h"
 #include "Overlay.h"
 
@@ -42,6 +43,7 @@ namespace
 	bool		g_registered = false;
 	bool		g_userHidden = false;				// escondido pelo jogador (tecla)
 	DWORD		g_lastReopen = 0;
+	int			g_reopens[2] = { 0, 0 };				// quantas vezes a vigia reabriu cada widget
 	int			g_last[4] = { 9999, 9999, 9999, 9999 };		// ultimos valores enviados: fome, sede, sono, corpo
 
 	bool Enabled(int id)
@@ -261,6 +263,7 @@ namespace
 
 		void Run() override
 		{
+			Perf::Scope perfScope(Perf::kWidgetUI);
 			for (int id = 0; id < 2; id++)
 			{
 				if (!g_menu[id]) continue;
@@ -363,8 +366,9 @@ namespace Widget
 		if (g_lastReopen != 0 && now - g_lastReopen < 8000) return;
 		for (int id = 0; id < 2; id++)
 		{
-			if (!g_menu[id] && Enabled(id))
+			if (!g_menu[id] && Enabled(id) && g_reopens[id] < 6)
 			{
+				g_reopens[id]++;
 				g_lastReopen = now;
 				_MESSAGE("ESD: widget %d estava fechado: a reabrir", id);
 				Open();

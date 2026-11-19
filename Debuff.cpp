@@ -18,6 +18,7 @@
 #include "Widget.h"
 #include "Expression.h"
 #include "Effects.h"
+#include "Perf.h"
 
 namespace
 {
@@ -189,6 +190,7 @@ namespace Debuff
 
 	void Refresh(UInt32 mask)
 	{
+		Perf::Scope perfScope(Perf::kDebuff);
 		Widget::QueueUpdate();		// o HUD acompanha qualquer mudanca nas necessidades
 		if (!Needs::IsSettled()) return;		// nao mexer no jogador antes de o jogo estar a correr (criacao de personagem, carregamento)
 		if (!Food::HasLists() || !g_thePlayer) return;		// sem o plugin do ESD nao ha feiticos

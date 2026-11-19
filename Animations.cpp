@@ -254,6 +254,7 @@ namespace Animations
 {
 	void Init()
 	{
+		if (ESDSettings::GetFloat("bPortAnimations", 1.0f) == 0.0f) { _MESSAGE("ESD/AA: animacoes desligadas (bPortAnimations=0)"); return; }
 		g_lists.clear();
 		g_itemAnim.clear();
 		LoadAnimDir("FoodsStanding",  "MealAnimations\\Foods_Standing\\");

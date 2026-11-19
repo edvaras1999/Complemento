@@ -12,6 +12,7 @@
 
 #include "Overlay.h"
 #include "Settings.h"
+#include "Perf.h"
 
 namespace
 {
@@ -73,11 +74,12 @@ namespace
 		std::string	m_lastHtml;
 		int			m_lastAlpha;
 		float		m_lastOffset;
+		DWORD		m_nextOffsetCheck;
 	public:
 		using GRefCountBaseStatImpl::operator new;
 		using GRefCountBaseStatImpl::operator delete;
 
-		MessageMenu() : m_lastAlpha(-1), m_lastOffset(-99999.0f)
+		MessageMenu() : m_lastAlpha(-1), m_lastOffset(-99999.0f), m_nextOffsetCheck(0)
 		{
 			if (LoadMovie(kSwfPath, GFxMovieView::SM_ShowAll, 0.0f))
 			{
@@ -115,6 +117,13 @@ namespace
 			if (!g_lockInit || !view) return;
 
 			DWORD now = GetTickCount();
+			// nada para mostrar nem para limpar: sai sem trabalho (o menu esta sempre aberto)
+			EnterCriticalSection(&g_lock);
+			bool none = g_lines.empty();
+			LeaveCriticalSection(&g_lock);
+			if (none && m_lastHtml.empty() && m_lastOffset != -99999.0f && (int)(now - m_nextOffsetCheck) < 0)
+				return;
+			Perf::Scope perfScope(Perf::kOverlay);
 			std::vector<Line> lines;
 			EnterCriticalSection(&g_lock);
 			for (size_t i = 0; i < g_lines.size();)
@@ -140,7 +149,12 @@ namespace
 			}
 
 			// posicao vertical (configuravel): 298 e a posicao base do campo no SWF (area de 720 de altura)
-			float offset = ESDSettings::GetFloat("fMessageOffsetY", 0.0f);
+			float offset = m_lastOffset;
+			if (m_lastOffset == -99999.0f || (int)(now - m_nextOffsetCheck) >= 0)
+			{
+				offset = ESDSettings::GetFloat("fMessageOffsetY", 0.0f);
+				m_nextOffsetCheck = now + 1000;
+			}
 			if (offset != m_lastOffset)
 			{
 				GFxValue y1, y2;
@@ -179,6 +193,7 @@ namespace Overlay
 	void Register()
 	{
 		if (g_registered) return;
+		if (ESDSettings::GetFloat("bPortOverlay", 1.0f) == 0.0f) { _MESSAGE("ESD: mensagens no centro desligadas (bPortOverlay=0)"); return; }
 		if (!g_lockInit) { InitializeCriticalSection(&g_lock); g_lockInit = true; }
 		MenuManager *mm = MenuManager::GetSingleton();
 		if (!mm) return;

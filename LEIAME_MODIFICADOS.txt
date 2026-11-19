@@ -1,0 +1,21 @@
+ESD-LE - ficheiros alterados (zip unico)
+=========================================
+Copia TODOS os ficheiros deste zip para a raiz do repositorio (substituem os que la estao) e corre o workflow.
+
+O QUE MUDOU
+  - Perf.h (NOVO): contadores de desempenho. De minuto a minuto o ESDPlugin.log tem uma linha
+      "ESD: [perf] ultimo minuto: necessidades=12x/0.8ms efeitos=... widgetUI=... mensagens=... atividade=... eventos=..."
+    (numero de vezes que cada parte correu e o tempo gasto). Envia-me essas linhas, sobretudo quando sentires o peso.
+  - main.cpp: as tarefas de cada segundo e de cada 5 segundos deixam de acumular quando o jogo esta em pausa, a carregar ou
+    num menu (podiam juntar-se e correr todas de uma vez); conta os eventos de contentores; liga o Perf.
+  - Widget.cpp: a vigia reabre cada widget no maximo 6 vezes por sessao (evita reabrir sem fim se o jogo o fechar de continuo).
+  - Overlay.cpp: o menu das mensagens sai logo se nao ha nada para mostrar e le a posicao uma vez por segundo, nao a cada frame.
+  - Debuff.cpp, Animations.cpp/.h, Settings.cpp, Effects.cpp, Events.cpp, ESDPlugin.vcxproj: alteracoes de versoes anteriores
+    (armadura ao lavar, registos de depuracao, interruptores) e o Perf.h no projeto.
+
+INTERRUPTORES PARA ISOLAR O PESO (Settings.json, grupo "port"; 1 = ligado, 0 = desligado; precisam de reiniciar o jogo)
+  bPortHotkeys     as teclas (refeicoes, esconder widgets)
+  bPortOverlay     as mensagens no centro do ecra
+  bPortAnimations  as animacoes do Action Animations
+  bActivityDecay   o desgaste por atividade
+  Se o peso desaparecer ao desligar um deles, e esse o culpado. Os widgets desligam-se no MCM.

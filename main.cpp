@@ -19,6 +19,7 @@
 #include "Animations.h"
 #include "Events.h"
 #include "Effects.h"
+#include "Perf.h"
 #include <string>
 #include <cstring>
 #include <Skyrim/Events/ScriptEvent.h>
@@ -35,10 +36,12 @@ namespace
 	//-------------------------------------------------------
 	// tarefa periodica: corre na thread principal do jogo
 	//-------------------------------------------------------
+	volatile LONG g_updQueued = 0, g_sampQueued = 0;		// evita acumular tarefas quando o jogo esta em pausa ou a carregar
+
 	class UpdateTask : public TaskDelegate
 	{
 	public:
-		virtual void Run() override { Needs::Update(); Widget::Watchdog(); }
+		virtual void Run() override { InterlockedExchange(&g_updQueued, 0); Perf::Scope p(Perf::kNeeds); Needs::Update(); Widget::Watchdog(); }
 		virtual void Dispose() override {}
 	};
 
@@ -47,7 +50,7 @@ namespace
 	class SampleTask : public TaskDelegate
 	{
 	public:
-		virtual void Run() override { Activity::Sample(); Expression::Tick(); Animations::Tick(); }
+		virtual void Run() override { InterlockedExchange(&g_sampQueued, 0); Perf::Scope p(Perf::kSample); Activity::Sample(); Expression::Tick(); Animations::Tick(); }
 		virtual void Dispose() override {}
 	};
 
@@ -63,9 +66,12 @@ namespace
 			const SKSEPlugin *plugin = SKSEPlugin::GetSingleton();
 			const SKSETaskInterface *task = plugin ? plugin->GetInterface<SKSETaskInterface>() : NULL;
 			if (!task) continue;
-			task->AddTask(&g_sampleTask);
-			if (++n % 5 == 0)
+			if (InterlockedCompareExchange(&g_sampQueued, 1, 0) == 0)
+				task->AddTask(&g_sampleTask);
+			if (++n % 5 == 0 && InterlockedCompareExchange(&g_updQueued, 1, 0) == 0)
 				task->AddTask(&g_task);
+			if (n % 60 == 0)
+				Perf::LogAndReset();
 		}
 		return 0;
 	}
@@ -206,6 +212,7 @@ namespace
 	public:
 		EventResult ReceiveEvent(TESContainerChangedEvent *evn, BSTEventSource<TESContainerChangedEvent> *src) override
 		{
+			Perf::Count(Perf::kEvents);
 			if (evn && evn->from == 0x14 && evn->to == 0)		// do jogador para o mundo
 			{
 				static int logged = 0;
@@ -362,7 +369,8 @@ public:
 		Needs::Init();
 		ESDSettings::Load();
 		Messages::Load();
-		Hotkeys::Start();
+		if (ESDSettings::GetFloat("bPortHotkeys", 1.0f) != 0.0f)
+			Hotkeys::Start();
 		CreateThread(NULL, 0, &Worker, NULL, 0, NULL);
 	}
 } thePlugin;

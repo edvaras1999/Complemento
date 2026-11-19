@@ -132,6 +132,7 @@
     <ClInclude Include="Messages.h" />
     <ClInclude Include="Needs.h" />
     <ClInclude Include="Overlay.h" />
+    <ClInclude Include="Perf.h" />
     <ClInclude Include="Papyrus.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Widget.h" />
