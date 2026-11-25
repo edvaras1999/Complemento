@@ -11,6 +11,9 @@
 #include "Messages.h"
 #include <Skyrim/Forms/TESObjectREFR.h>
 #include <cmath>
+#include <windows.h>
+#include <SKSE/PapyrusInvoke.h>
+#include <Skyrim/SkyrimVM.h>
 
 //========================================================
 // Funcoes nativas usadas pelos scripts do ESD (ESDUtility.psc e _ESDMCM.psc).
@@ -126,6 +129,43 @@ namespace
 			ESDSettings::Save();
 	}
 
+
+	//-----------------------------------------------------------
+	// Activation Animations: funcoes nativas que os scripts do mod esperam da DLL (versao 1, segura).
+	// A DLL original decide aqui que animacao tocar; nesta versao diz sempre "sem animacao", e os scripts
+	// fazem a ativacao normal por PickUpObj.
+	//-----------------------------------------------------------
+	typedef _NativeFunction<TESObjectREFR, bool, TESObjectREFR *, bool> ActivateNative;
+	UInt32 g_pickTarget = 0;
+	DWORD  g_pickTime = 0;
+
+	// bool RegisterForInteractionAnimation(ObjectReference obj, int perkType)
+	bool N_ActRegister(TESObjectREFR *obj, SInt32 perkType)
+	{
+		return false;
+	}
+
+	// PickUpObj(target, activator): ativacao normal do objeto (o original chama ActivateRef; aqui Activate com processamento por omissao)
+	void N_ActPickUp(TESObjectREFR *target, TESObjectREFR *activator)
+	{
+		if (!target || !activator || !g_skyrimVM) return;
+		DWORD now = GetTickCount();
+		if (target->formID == g_pickTarget && now - g_pickTime < 1000) return;		// trava de seguranca contra ciclos
+		g_pickTarget = target->formID;
+		g_pickTime = now;
+		VMState *state = g_skyrimVM->GetState();
+		if (!state) return;
+		ActivateNative *fn = (ActivateNative *)SKSEScript::GetFunction(state, TESObjectREFR::kTypeID, "Activate");
+		if (!fn || !fn->Validate(state)) { _MESSAGE("ESD: nao encontrei ObjectReference.Activate; PickUpObj nao faz nada"); return; }
+		(*fn)(state, 0, target, activator, true);
+	}
+
+	void N_ActFixAngle(TESObjectREFR *ref, float angle) {}		// so e chamada durante uma animacao (ainda nao ha)
+	void N_ActUnregister() {}
+	void N_ActStartUp(SInt32 mask) {}
+	void N_ActCleanUp() {}
+	void N_ActUpdateFeature() {}
+
 	float N_GetESDSetting(BSFixedString name)
 	{
 		return ESDSettings::GetFloat(name.c_str(), 0.0f);
@@ -161,6 +201,13 @@ bool Papyrus::RegisterFunctions(VMState *state)
 	SKSEScript::RegisterFunction("_ActionAnimationsMCM", "Register", &N_AARegister, state);
 	SKSEScript::RegisterFunction("_ActionAnimationsMCM", "GetSetting", &N_AAGetSetting, state);
 	SKSEScript::RegisterFunction("_ActionAnimationsMCM", "SetSetting", &N_AASetSetting, state);
+	SKSEScript::RegisterFunction("_ActivationAnimationPreScript", "RegisterForInteractionAnimation", &N_ActRegister, state);
+	SKSEScript::RegisterFunction("_ActivateAnimationPlayScript", "PickUpObj", &N_ActPickUp, state);
+	SKSEScript::RegisterFunction("_ActivateAnimationPlayScript", "FixAngle", &N_ActFixAngle, state);
+	SKSEScript::RegisterFunction("_ActivateAnimationPlayScript", "UnregisterForInteractionAnimation", &N_ActUnregister, state);
+	SKSEScript::RegisterFunction("_ActivationAnimMCM", "StartUpKNNAA", &N_ActStartUp, state);
+	SKSEScript::RegisterFunction("_ActivationAnimMCM", "CleanUpKNNAA", &N_ActCleanUp, state);
+	SKSEScript::RegisterFunction("_ActivationAnimMCM", "UpdateAcivationAnimationsFeature", &N_ActUpdateFeature, state);
 	SKSEScript::RegisterFunction("_ESDMCM", "GetESDSetting", &N_GetESDSetting, state);
 	SKSEScript::RegisterFunction("_ESDMCM", "GetESDSettingString", &N_GetESDSettingString, state);
 	SKSEScript::RegisterFunction("_ESDMCM", "SetESDSetting", &N_SetESDSetting, state);
