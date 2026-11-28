@@ -8,8 +8,11 @@
 #include "Debuff.h"
 #include "Widget.h"
 #include "Food.h"
+#include "Animations.h"
 #include "Messages.h"
 #include <Skyrim/Forms/TESObjectREFR.h>
+#include <Skyrim/Forms/PlayerCharacter.h>
+#include <Skyrim/Forms/TESForm.h>
 #include <cmath>
 #include <windows.h>
 #include <SKSE/PapyrusInvoke.h>
@@ -139,10 +142,43 @@ namespace
 	UInt32 g_pickTarget = 0;
 	DWORD  g_pickTime = 0;
 
+	typedef _NativeFunction<TESObjectREFR, void, BSFixedString, SInt32>	SetVarIntNative;
+	typedef _NativeFunction<TESObjectREFR, void, BSFixedString, float>	SetVarFloatNative;
+
 	// bool RegisterForInteractionAnimation(ObjectReference obj, int perkType)
+	// Modo de teste: com iActivationForceState > 0 poe a variavel iESDActivateAnimsState e envia o evento de inicio.
+	// Sem isso (automatico ainda por fazer) devolve false e o script faz a ativacao normal.
 	bool N_ActRegister(TESObjectREFR *obj, SInt32 perkType)
 	{
-		return false;
+		if (!obj || !g_thePlayer || !g_skyrimVM) return false;
+
+		if (ESDSettings::GetFloat("bActivationLog", 1.0f) != 0.0f)
+		{
+			TESForm *base = obj->baseForm;
+			float dx = obj->pos.x - g_thePlayer->pos.x, dy = obj->pos.y - g_thePlayer->pos.y, dz = obj->pos.z - g_thePlayer->pos.z;
+			_MESSAGE("ESD: [ativacao] obj=%08X base=%08X tipo=%d nome='%s' perk=%d dist=%.0f dz=%.0f", obj->formID, base ? base->formID : 0,
+				base ? (int)base->formType : -1, base && base->GetName() ? base->GetName() : "", (int)perkType,
+				sqrtf(dx * dx + dy * dy), dz);
+		}
+
+		int forced = (int)ESDSettings::GetFloat("iActivationForceState", 0.0f);
+		if (forced <= 0 || !Animations::CanPlayNow()) return false;
+
+		VMState *state = g_skyrimVM->GetState();
+		if (!state) return false;
+		SetVarIntNative *setInt = (SetVarIntNative *)SKSEScript::GetFunction(state, TESObjectREFR::kTypeID, "SetAnimationVariableInt");
+		SetVarFloatNative *setFloat = (SetVarFloatNative *)SKSEScript::GetFunction(state, TESObjectREFR::kTypeID, "SetAnimationVariableFloat");
+		if (!setInt || !setInt->Validate(state) || !setFloat || !setFloat->Validate(state))
+		{
+			_MESSAGE("ESD: [ativacao] nao encontrei SetAnimationVariableInt/Float (assinatura diferente); nao posso tocar a animacao");
+			return false;
+		}
+		(*setInt)(state, 0, (TESObjectREFR *)g_thePlayer, BSFixedString("iESDActivateAnimsState"), (SInt32)forced);
+		(*setFloat)(state, 0, (TESObjectREFR *)g_thePlayer, BSFixedString("fESDPlayBackSpeed"), ESDSettings::GetFloat("fActivationSpeed", 1.0f));
+		bool door = (forced == 10 || forced == 11 || (forced >= 32 && forced <= 35));
+		bool ok = Animations::SendEvent(door ? "ESDInteractionsDoorStart" : "ESDInteractionsStart");
+		_MESSAGE("ESD: [ativacao] estado %d forcado: evento %s %s", forced, door ? "ESDInteractionsDoorStart" : "ESDInteractionsStart", ok ? "enviado" : "recusado pelo jogo");
+		return ok;
 	}
 
 	// PickUpObj(target, activator): ativacao normal do objeto (o original chama ActivateRef; aqui Activate com processamento por omissao)

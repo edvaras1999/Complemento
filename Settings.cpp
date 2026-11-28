@@ -136,6 +136,9 @@ namespace
 		Add("port", "bPortHotkeys", 1);				// 0 desliga as teclas (refeicoes, esconder widgets): serve para isolar problemas de desempenho
 		Add("port", "bPortOverlay", 1);				// 0 desliga as mensagens no centro do ecra (usa a notificacao do canto)
 		Add("port", "bPortAnimations", 1);			// 0 desliga as animacoes do Action Animations
+		Add("port", "iActivationForceState", 0);		// TESTE das animacoes de ativacao: 0 = desligado; 1..36 (ou 300, 1000) = forca esse estado em todas as ativacoes
+		Add("port", "fActivationSpeed", 1.0f);			// velocidade da animacao de ativacao (fESDPlayBackSpeed)
+		Add("port", "bActivationLog", 1);				// 1 = regista no log o que o jogo sabe de cada objeto ativado (para afinar as regras)
 		Add("port", "bWidgetUserHidden", 0);		// estado atual: 1 = widgets escondidos pelo jogador
 
 		// Action Animations (integrado): ligar/desligar cada tipo de animacao (MCM do AA: _ActionAnimationsMCM)

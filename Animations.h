@@ -11,6 +11,8 @@ namespace Animations
 	bool OnConsume(TESForm *item, bool isDrink);	// o jogador consumiu comida/bebida: toca a animacao certa
 	bool PlayType(int type);
 	bool PlayTypeNamed(int type, const char *name);
+	bool CanPlayNow();								// condicoes do AA (sem nadar, voar, cair, arma sacada)
+	bool SendEvent(const char *eventName);			// envia um evento de animacao ao jogador
 	void Tick();									// uma vez por segundo: repoe a armadura retirada ao lavar, quando a animacao acaba	// como PlayType, mas com o nome da animacao pedido pelo script (ex.: PickupBedroll)						// animacoes pedidas pelo ESD: 1 agua de fonte, 2 encher garrafa, 4 toalhas,
 													// 8 lavar o corpo, 20 cama portatil, 40 alma de dragao, 80 barril
 }

@@ -1,0 +1,22 @@
+ESD-LE - ficheiros alterados (zip unico)
+========================================
+Copia estes 5 ficheiros para a raiz do repositorio (substituem) e corre o workflow.
+
+O QUE FAZ (animacoes de ativacao, versao de teste)
+  A DLL ja fala com os teus comportamentos convertidos: poe a variavel iESDActivateAnimsState (1..36, 300, 1000)
+  e envia o evento ESDInteractionsStart (portas: ESDInteractionsDoorStart).
+
+  TESTE: no Settings.json, grupo "port", poe "iActivationForceState": 34 (por exemplo) e ativa uma porta.
+  A animacao do estado 34 deve tocar em TODAS as ativacoes (so com os mods e a perk de ativacao instalados).
+  Poe 0 para desligar. A escolha AUTOMATICA do estado ainda nao existe.
+
+  Estados que vi nos teus OAR: 1 crouch, 3 stand, 36 tiptoe, 4 botao, 5/6 corrente, 7/8 barra, 9 pilar, 10/11 porta de barra,
+  12 rezar, 13/14 jaula, 15/16 vitrine, 17-22 rodas de puzzle, 23-28 alavancas, 29 mesa, 30 guarda-roupa, 31 armario,
+  32-35 portas, 300 e 1000 (especiais). O mapa por nome esta no Nemesis/OAR (pastas ESDActirvationAnimationsReplace).
+
+LOG: cada ativacao escreve uma linha "[ativacao] obj=... base=... tipo=... nome=... perk=... dist=... dz=...".
+  Envia-me essas linhas (abre portas, alavancas, bau, mesa, item no chao...) para eu criar as regras automaticas
+  com dados reais em vez de adivinhar.
+
+CUIDADO: com o estado forcado, o script espera que o comportamento envie os eventos de ativacao; se a animacao
+  nao os enviar, o objeto pode ficar sem ativar. Se isso acontecer, poe iActivationForceState a 0.

@@ -334,4 +334,16 @@ namespace Animations
 		if (g_reequipAt != 0 && (int)(GetTickCount() - g_reequipAt) >= 0)
 			ReequipAll();
 	}
+
+	bool CanPlayNow()
+	{
+		return CanPlay();
+	}
+
+	bool SendEvent(const char *eventName)
+	{
+		if (!g_thePlayer || !eventName) return false;
+		BSFixedString ev(eventName);
+		return g_thePlayer->SendAnimationEvent(ev);
+	}
 }
